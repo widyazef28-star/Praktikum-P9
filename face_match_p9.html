@@ -1,441 +1,305 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Praktikum P9 - Face Matching</title>
+<title>Praktikum P9 - Verifikasi Wajah</title>
+
+<script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
 
 <style>
+* { box-sizing: border-box; }
 body {
-    font-family: system-ui, sans-serif;
-    background: #f4f6f9;
-    color: #1e293b;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
     margin: 0;
     padding: 20px;
+    color: #222;
 }
-
 .container {
-    max-width: 1100px;
+    max-width: 1000px;
     margin: auto;
     background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    padding: 22px;
+    border-radius: 12px;
 }
-
-h1 { color: #0f172a; }
-.subtitle { color: #64748b; }
-
-#status {
-    padding: 12px;
-    background: #fef3c7;
-    color: #92400e;
-    border-radius: 6px;
-    margin-bottom: 20px;
-}
-
-#status.ready {
-    background: #dcfce7;
-    color: #166534;
-}
-
-#status.error {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.grid {
+h1, h2 { text-align: center; }
+.upload-area, .hasil-area {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-.card {
-    border: 1px solid #e2e8f0;
-    padding: 15px;
-    border-radius: 8px;
-    text-align: center;
-    background: #f8fafc;
-}
-
-canvas {
-    width: 200px;
-    height: 200px;
-    max-width: 100%;
-    object-fit: contain;
-    background: #0f172a;
-    border-radius: 6px;
-    margin-top: 10px;
-}
-
-.controls {
-    display: flex;
-    flex-wrap: wrap;
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
-    align-items: center;
-    background: #f1f5f9;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
 }
-
+.panel {
+    background: #f8fafc;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+canvas {
+    width: 100%;
+    max-width: 300px;
+    display: block;
+    margin: 12px auto;
+    border: 1px solid #aaa;
+    background: #eee;
+}
+input, button {
+    padding: 10px;
+    margin: 6px 0;
+}
 button {
     background: #2563eb;
     color: white;
-    border: none;
-    padding: 12px 20px;
+    border: 0;
     border-radius: 6px;
-    font-weight: 600;
     cursor: pointer;
 }
-
 button:disabled {
-    background: #94a3b8;
+    background: #999;
     cursor: not-allowed;
 }
-
-input[type="range"] {
-    max-width: 180px;
-}
-
-.result-box {
-    padding: 20px;
-    border-radius: 8px;
-    border: 2px solid #cbd5e1;
-    display: none;
-    overflow-x: auto;
-}
-
-.match {
-    border-color: #22c55e;
-    background: #f0fdf4;
-}
-
-.no-match {
-    border-color: #ef4444;
-    background: #fef2f2;
-}
-
+input[type="range"] { width: 100%; }
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
-    font-size: .9rem;
+    margin-top: 12px;
 }
-
 th, td {
-    border: 1px solid #cbd5e1;
-    padding: 8px 12px;
-    text-align: left;
+    border: 1px solid #ddd;
+    padding: 9px;
+    text-align: center;
 }
-
-th { background: #e2e8f0; }
-
-.section-title {
-    margin-top: 25px;
-    color: #1e40af;
+th { background: #e5e7eb; }
+#status {
+    padding: 12px;
+    background: #eff6ff;
+    border-radius: 6px;
+    margin: 12px 0;
 }
-
+#hasil {
+    font-weight: bold;
+    text-align: center;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 8px;
+}
 @media(max-width:650px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
+    .upload-area, .hasil-area { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-<h1>Implementasi Face Matching (Pertemuan 9)</h1>
+<h1>Implementasi Verifikasi Wajah</h1>
+<p style="text-align:center">Praktikum Pengolahan Citra Digital - P9</p>
 
-<p class="subtitle">
-Ekstraksi Histogram RGB, Momen Hu, ROI Wajah,
-Geometri, Zoom dan Verifikasi NCC
-</p>
+<div id="status">Menunggu OpenCV.js dimuat...</div>
 
-<div id="status">Memuat OpenCV.js...</div>
-
-<div class="grid">
-
-    <div class="card">
-        <strong>Wajah Referensi (Objek A)</strong>
-        <br><br>
-        <input type="file" id="inputA" accept="image/*" disabled>
-        <br>
-        <canvas id="canvasA" width="200" height="200"></canvas>
+<div class="upload-area">
+    <div class="panel">
+        <h2>Foto Referensi (A)</h2>
+        <input type="file" id="fileA" accept="image/*">
+        <canvas id="canvasA" width="300" height="300"></canvas>
     </div>
 
-    <div class="card">
-        <strong>Wajah Uji (Objek B)</strong>
-        <br><br>
-        <input type="file" id="inputB" accept="image/*" disabled>
-        <br>
-        <canvas id="canvasB" width="200" height="200"></canvas>
+    <div class="panel">
+        <h2>Foto Uji (B)</h2>
+        <input type="file" id="fileB" accept="image/*">
+        <canvas id="canvasB" width="300" height="300"></canvas>
     </div>
-
 </div>
 
-<div class="controls">
+<div class="panel">
+    <h2>Pengaturan Pengujian</h2>
 
-    <label>
-        <strong>Zoom Gambar B:</strong>
-        <span id="zoomVal">1.00x</span>
-    </label>
+    <label>Threshold: <strong id="nilaiThreshold">0.70</strong></label>
+    <input type="range" id="threshold" min="0.50" max="0.99"
+           step="0.01" value="0.70">
 
-    <input type="range"
-        id="zoom"
-        min="0.50"
-        max="2.00"
-        step="0.10"
-        value="1.00">
+    <label>Rotasi Foto B:</label>
+    <input type="range" id="rotasi" min="-45" max="45" value="0">
+    <span id="nilaiRotasi">0°</span>
 
+    <label>Zoom Foto B:</label>
+    <input type="range" id="zoom" min="0.5" max="2"
+           step="0.1" value="1">
+    <span id="nilaiZoom">1.0x</span>
+
+    <br>
+    <button id="btnVerifikasi" disabled>Verifikasi Wajah</button>
+    <button id="btnReset">Reset Pengujian</button>
 </div>
 
-<div class="controls">
-
-    <label>
-        <strong>Threshold NCC:</strong>
-        <span id="threshVal">0.85</span>
-    </label>
-
-    <input type="range"
-        id="threshold"
-        min="0.50"
-        max="0.99"
-        step="0.01"
-        value="0.85">
-
-    <button id="btnVerify" disabled>
-        Jalankan Verifikasi Wajah
-    </button>
-
+<div class="panel">
+    <h2>Hasil Optimasi ROI Wajah</h2>
+    <div class="hasil-area">
+        <div>
+            <p>ROI Foto A</p>
+            <canvas id="roiA" width="200" height="200"></canvas>
+        </div>
+        <div>
+            <p>ROI Foto B</p>
+            <canvas id="roiB" width="200" height="200"></canvas>
+        </div>
+    </div>
+    <p>ROI merupakan pemotongan area tengah gambar untuk mengurangi pengaruh latar belakang. ROI ini bukan deteksi wajah otomatis.</p>
 </div>
 
-<div id="resultBox" class="result-box">
-
-    <h2 id="decisionText"></h2>
-    <p id="scoreDetail"></p>
-
-    <h3 class="section-title">1. Hasil Ekstraksi Fitur</h3>
+<div class="panel">
+    <h2>Hasil Verifikasi</h2>
+    <div id="hasil">Belum dilakukan pengujian</div>
 
     <table>
         <thead>
+            <tr><th>Fitur</th><th>Nilai</th></tr>
+        </thead>
+        <tbody id="metricsBody">
+            <tr><td colspan="2">Belum ada data</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="panel">
+    <h2>Riwayat Pengujian</h2>
+    <table>
+        <thead>
             <tr>
-                <th>Deskriptor / Metrik</th>
-                <th>Objek A</th>
-                <th>Objek B</th>
+                <th>No</th>
+                <th>Rotasi</th>
+                <th>Zoom</th>
+                <th>Threshold</th>
                 <th>Skor NCC</th>
+                <th>Hasil</th>
             </tr>
         </thead>
-        <tbody id="metricsBody"></tbody>
+        <tbody id="riwayat">
+            <tr><td colspan="6">Belum ada pengujian</td></tr>
+        </tbody>
     </table>
-
-    <h3 class="section-title">2. Informasi ROI Wajah</h3>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Informasi</th>
-                <th>Objek A</th>
-                <th>Objek B</th>
-            </tr>
-        </thead>
-        <tbody id="roiBody"></tbody>
-    </table>
-
-    <h3 class="section-title">3. Nilai Momen Hu</h3>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Momen Hu</th>
-                <th>Objek A</th>
-                <th>Objek B</th>
-            </tr>
-        </thead>
-        <tbody id="huBody"></tbody>
-    </table>
-
-    <h3 class="section-title">4. Rincian Skor NCC</h3>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Jenis Skor</th>
-                <th>Nilai</th>
-            </tr>
-        </thead>
-        <tbody id="nccBody"></tbody>
-    </table>
-
 </div>
 
 </div>
-
-<script async
-src="https://docs.opencv.org/4.8.0/opencv.js"
-onload="onOpenCvReady()">
-</script>
 
 <script>
+let cvSiap = false;
+let gambarA = null;
+let gambarB = null;
+let nomorUji = 0;
 
-let imgLoadedA = false;
-let imgLoadedB = false;
-let cvReady = false;
+function tampilStatus(pesan) {
+    document.getElementById("status").textContent = pesan;
+}
 
-let gambarBAsli = null;
-
-const statusBox = document.getElementById("status");
-
-// MENYIAPKAN OPENCV
-function onOpenCvReady() {
-
-    if (typeof cv === "undefined") {
-        statusBox.textContent = "OpenCV.js gagal dimuat.";
-        statusBox.className = "error";
-        return;
-    }
-
-    cv.onRuntimeInitialized = function() {
-
-        cvReady = true;
-
-        statusBox.textContent =
-            "OpenCV.js Siap! Silakan unggah kedua gambar.";
-
-        statusBox.className = "ready";
-
-        document.getElementById("inputA").disabled = false;
-        document.getElementById("inputB").disabled = false;
-
+function periksaOpenCV() {
+    if (typeof cv !== "undefined" && cv.Mat) {
+        cvSiap = true;
+        tampilStatus("OpenCV.js berhasil dimuat. Silakan unggah kedua foto.");
         cekTombol();
-    };
+    } else {
+        setTimeout(periksaOpenCV, 300);
+    }
 }
+periksaOpenCV();
 
-// CEK KESIAPAN TOMBOL
 function cekTombol() {
-
-    document.getElementById("btnVerify").disabled =
-        !(imgLoadedA && imgLoadedB && cvReady);
-
+    document.getElementById("btnVerifikasi").disabled =
+        !(cvSiap && gambarA && gambarB);
 }
 
-// MENGATUR THRESHOLD
-document.getElementById("threshold")
-.addEventListener("input", function(e) {
+function tampilkanGambar(file, canvasId, sisi) {
+    if (!file) return;
 
-    document.getElementById("threshVal").textContent =
-        Number(e.target.value).toFixed(2);
-
-});
-
-// MEMUAT GAMBAR
-function loadImage(inputId, canvasId, flag) {
-
-    document.getElementById(inputId)
-    .addEventListener("change", function(e) {
-
-        const file = e.target.files[0];
-
-        if (!file) return;
-
+    const reader = new FileReader();
+    reader.onload = function(e) {
         const img = new Image();
-
         img.onload = function() {
+            if (sisi === "A") gambarA = img;
+            else gambarB = img;
 
-            const canvas = document.getElementById(canvasId);
-            const ctx = canvas.getContext("2d");
-
-            canvas.width = 200;
-            canvas.height = 200;
-
-            ctx.clearRect(0, 0, 200, 200);
-            ctx.drawImage(img, 0, 0, 200, 200);
-
-            if (flag === "A") imgLoadedA = true;
-
-            if (flag === "B") {
-                imgLoadedB = true;
-                gambarBAsli = img;
-                terapkanZoom();
-            }
-
-            URL.revokeObjectURL(img.src);
-
+            gambarKeCanvas(img, canvasId, 0, 1);
             cekTombol();
-
+            tampilStatus("Foto " + sisi + " berhasil diunggah.");
         };
-
-        img.onerror = function() {
-            alert("Gambar tidak dapat dibaca.");
-        };
-
-        img.src = URL.createObjectURL(file);
-
-    });
-
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
-loadImage("inputA", "canvasA", "A");
-loadImage("inputB", "canvasB", "B");
-
-// MENGATUR ZOOM GAMBAR B
-function terapkanZoom() {
-
-    if (!gambarBAsli) return;
-
-    const zoom = Number(
-        document.getElementById("zoom").value
-    );
-
-    const canvas = document.getElementById("canvasB");
-    const ctx = canvas.getContext("2d");
-
-    canvas.width = 200;
-    canvas.height = 200;
-
-    ctx.clearRect(0, 0, 200, 200);
-
-    const lebar = 200 * zoom;
-    const tinggi = 200 * zoom;
-
-    const x = (200 - lebar) / 2;
-    const y = (200 - tinggi) / 2;
-
-    ctx.drawImage(
-        gambarBAsli,
-        x,
-        y,
-        lebar,
-        tinggi
-    );
-
-    document.getElementById("zoomVal").textContent =
-        zoom.toFixed(2) + "x";
-
-}
-
-document.getElementById("zoom")
-.addEventListener("input", function() {
-
-    terapkanZoom();
-
+document.getElementById("fileA").addEventListener("change", function() {
+    tampilkanGambar(this.files[0], "canvasA", "A");
 });
 
-// MENGHITUNG MOMEN HU SECARA MANUAL
-function hitungHu(m) {
+document.getElementById("fileB").addEventListener("change", function() {
+    tampilkanGambar(this.files[0], "canvasB", "B");
+});
 
+function gambarKeCanvas(img, canvasId, rotasi, zoom) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(rotasi * Math.PI / 180);
+    ctx.scale(zoom, zoom);
+
+    const skala = Math.min(w / img.width, h / img.height);
+    const iw = img.width * skala;
+    const ih = img.height * skala;
+
+    ctx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
+    ctx.restore();
+}
+
+function perbaruiFotoB() {
+    if (!gambarB) return;
+
+    const rotasi = Number(document.getElementById("rotasi").value);
+    const zoom = Number(document.getElementById("zoom").value);
+
+    document.getElementById("nilaiRotasi").textContent = rotasi + "°";
+    document.getElementById("nilaiZoom").textContent = zoom.toFixed(1) + "x";
+
+    gambarKeCanvas(gambarB, "canvasB", rotasi, zoom);
+}
+
+document.getElementById("rotasi").addEventListener("input", perbaruiFotoB);
+document.getElementById("zoom").addEventListener("input", perbaruiFotoB);
+
+document.getElementById("threshold").addEventListener("input", function() {
+    document.getElementById("nilaiThreshold").textContent =
+        Number(this.value).toFixed(2);
+});
+
+function buatROI(canvasId, roiId) {
+    const sumber = document.getElementById(canvasId);
+    const roi = document.getElementById(roiId);
+    const ctx = roi.getContext("2d");
+
+    const x = sumber.width * 0.25;
+    const y = sumber.height * 0.15;
+    const w = sumber.width * 0.5;
+    const h = sumber.height * 0.7;
+
+    ctx.clearRect(0, 0, roi.width, roi.height);
+    ctx.drawImage(sumber, x, y, w, h, 0, 0, roi.width, roi.height);
+
+    return roi;
+}
+
+function hitungHu(m) {
     const n20 = m.nu20;
     const n02 = m.nu02;
     const n11 = m.nu11;
     const n30 = m.nu30;
-    const n03 = m.nu03;
     const n12 = m.nu12;
     const n21 = m.nu21;
+    const n03 = m.nu03;
 
     const a = n30 - 3 * n12;
     const b = 3 * n21 - n03;
@@ -443,478 +307,174 @@ function hitungHu(m) {
     const d = n21 + n03;
 
     return [
-
         n20 + n02,
-
-        Math.pow(n20 - n02, 2) +
-        4 * Math.pow(n11, 2),
-
-        Math.pow(a, 2) + Math.pow(b, 2),
-
-        Math.pow(c, 2) + Math.pow(d, 2),
-
-        a * c * (c*c - 3*d*d) +
-        b * d * (3*c*c - d*d),
-
-        (n20 - n02) * (c*c - d*d) +
-        4 * n11 * c * d,
-
-        b * c * (c*c - 3*d*d) -
-        a * d * (3*c*c - d*d)
-
-    ];
+        Math.pow(n20 - n02, 2) + 4 * n11 * n11,
+        a*a + b*b,
+        c*c + d*d,
+        a*c*(c*c - 3*d*d) + b*d*(3*c*c - d*d),
+        (n20 - n02)*(c*c - d*d) + 4*n11*c*d,
+        b*c*(c*c - 3*d*d) - a*d*(3*c*c - d*d)
+    ].map(v => {
+        if (!Number.isFinite(v) || v === 0) return 0;
+        return -Math.sign(v) * Math.log10(Math.abs(v));
+    });
 }
 
-// MEMBUAT ROI WAJAH
-function buatROI(canvasId) {
-
-    const canvasAsli = document.getElementById(canvasId);
-
-    const roiCanvas = document.createElement("canvas");
-
-    roiCanvas.width = 200;
-    roiCanvas.height = 200;
-
-    const ctxROI = roiCanvas.getContext("2d");
-
-    const x = 40;
-    const y = 20;
-    const width = 120;
-    const height = 160;
-
-    ctxROI.drawImage(
-        canvasAsli,
-        x, y, width, height,
-        0, 0, 200, 200
-    );
-
-    return {
-        canvas: roiCanvas,
-        info: { x, y, width, height }
-    };
-
-}
-
-// FUNGSI EKSTRAKSI FITUR GAMBAR
-function ekstrakFiturObjek(canvasId) {
-
-    const hasilROI = buatROI(canvasId);
-    const canvasROI = hasilROI.canvas;
-
-    let src = cv.imread(canvasROI);
-    let gray = new cv.Mat();
-    let binary = new cv.Mat();
-
-    let histVec = [];
+function ekstrakFitur(canvasId, roiId) {
+    const canvasROI = buatROI(canvasId, roiId);
+    const src = cv.imread(canvasROI);
+    const gray = new cv.Mat();
+    const blur = new cv.Mat();
+    const binary = new cv.Mat();
 
     try {
-
-        // GRAYSCALE
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+        cv.threshold(blur, binary, 0, 255,
+            cv.THRESH_BINARY + cv.THRESH_OTSU);
 
-        cv.GaussianBlur(
-            gray,
-            gray,
-            new cv.Size(5, 5),
-            0
-        );
-
-        // HISTOGRAM RGB
-        const canvas = canvasROI;
-        const ctx = canvas.getContext("2d");
-
-        const pixels = ctx.getImageData(
-            0, 0, canvas.width, canvas.height
-        ).data;
-
-        const histograms = [
-            new Array(64).fill(0),
-            new Array(64).fill(0),
-            new Array(64).fill(0)
-        ];
-
-        for (let i = 0; i < pixels.length; i += 4) {
-
-            const r = pixels[i];
-            const g = pixels[i + 1];
-            const b = pixels[i + 2];
-
-            histograms[0][Math.min(63, Math.floor(r / 4))]++;
-            histograms[1][Math.min(63, Math.floor(g / 4))]++;
-            histograms[2][Math.min(63, Math.floor(b / 4))]++;
-
-        }
-
-        // NORMALISASI HISTOGRAM
-        for (let c = 0; c < 3; c++) {
-
-            let norm = Math.sqrt(
-                histograms[c].reduce(
-                    (sum, value) => sum + value * value,
-                    0
-                )
-            );
-
-            for (let i = 0; i < 64; i++) {
-
-                histVec.push(
-                    norm > 0
-                    ? histograms[c][i] / norm
-                    : 0
-                );
-
-            }
-
-        }
-
-        // MOMEN HU DAN GEOMETRI
-        cv.threshold(
-            gray,
-            binary,
-            0,
-            255,
-            cv.THRESH_BINARY + cv.THRESH_OTSU
-        );
-
-        let whiteCount = 0;
-
-        for (let i = 0; i < binary.data.length; i++) {
-            if (binary.data[i] > 0) whiteCount++;
-        }
-
-        if (whiteCount > binary.rows * binary.cols / 2) {
+        const putih = cv.countNonZero(binary);
+        if (putih > binary.rows * binary.cols / 2) {
             cv.bitwise_not(binary, binary);
         }
 
-        const momen = cv.moments(binary, true);
-        const hu = hitungHu(momen);
+        const moments = cv.moments(binary, true);
+        const hu = hitungHu(moments);
 
-        let huVec = hu.map(function(val) {
+        const histogram = [];
+        const data = canvasROI.getContext("2d")
+            .getImageData(0, 0, canvasROI.width, canvasROI.height).data;
 
-            return val !== 0 && Number.isFinite(val)
-                ? -Math.sign(val) * Math.log10(Math.abs(val))
-                : 0;
+        for (let channel = 0; channel < 3; channel++) {
+            const bins = new Array(64).fill(0);
 
-        });
-
-        // GEOMETRI OBJEK
-        let minX = binary.cols;
-        let minY = binary.rows;
-        let maxX = -1;
-        let maxY = -1;
-
-        let luas = 0;
-        let keliling = 0;
-
-        const data = binary.data;
-        const rows = binary.rows;
-        const cols = binary.cols;
-
-        for (let y = 0; y < rows; y++) {
-
-            for (let x = 0; x < cols; x++) {
-
-                const index = y * cols + x;
-
-                if (data[index] > 0) {
-
-                    luas++;
-
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
-
-                    if (y === 0 || data[(y-1)*cols+x] === 0) keliling++;
-                    if (y === rows-1 || data[(y+1)*cols+x] === 0) keliling++;
-                    if (x === 0 || data[y*cols+x-1] === 0) keliling++;
-                    if (x === cols-1 || data[y*cols+x+1] === 0) keliling++;
-
-                }
-
+            for (let i = channel; i < data.length; i += 4) {
+                const bin = Math.min(63, Math.floor(data[i] / 4));
+                bins[bin]++;
             }
 
+            const total = bins.reduce((a, b) => a + b, 0) || 1;
+            bins.forEach(v => histogram.push(v / total));
         }
 
-        let rasioAspek = 0;
-
-        if (maxX >= minX && maxY >= minY) {
-
-            const width = maxX - minX + 1;
-            const height = maxY - minY + 1;
-
-            rasioAspek = height > 0 ? width / height : 0;
-
-        }
-
-        const bentukInfo = {
-            luas: luas,
-            keliling: keliling,
-            rasioAspek: rasioAspek.toFixed(2)
-        };
-
-        return {
-            histVec,
-            huVec,
-            bentukInfo,
-            roiInfo: hasilROI.info
-        };
-
+        return { hu, histogram };
     } finally {
-
         src.delete();
         gray.delete();
+        blur.delete();
         binary.delete();
-
     }
-
 }
 
-// NORMALIZED CROSS-CORRELATION
-function ncc(vecA, vecB) {
-
-    if (vecA.length !== vecB.length || vecA.length === 0) {
-        return 0;
-    }
-
+function ncc(a, b) {
     let dot = 0;
     let normA = 0;
     let normB = 0;
 
-    for (let i = 0; i < vecA.length; i++) {
-
-        dot += vecA[i] * vecB[i];
-        normA += vecA[i] * vecA[i];
-        normB += vecB[i] * vecB[i];
-
+    for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
     }
 
     if (normA === 0 || normB === 0) return 0;
-
-    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-
+    return Math.max(0, Math.min(1,
+        dot / (Math.sqrt(normA) * Math.sqrt(normB))
+    ));
 }
 
-// VERIFIKASI WAJAH
-function verifikasiWajah(fiturA, fiturB, ambang) {
-
-    const skorWarna = ncc(fiturA.histVec, fiturB.histVec);
-    const skorBentuk = ncc(fiturA.huVec, fiturB.huVec);
-
-    const skorGabungan =
-        (0.6 * skorWarna) +
-        (0.4 * skorBentuk);
-
-    return {
-
-        skorWarna,
-        skorBentuk,
-        skorGabungan,
-
-        keputusan:
-            skorGabungan >= ambang
-            ? "COCOK"
-            : "TIDAK COCOK"
-
-    };
-
-}
-
-// TOMBOL VERIFIKASI
-document.getElementById("btnVerify")
-.addEventListener("click", function() {
-
-    const box = document.getElementById("resultBox");
-
-    box.style.display = "block";
-
-    try {
-
-        if (!cvReady || !imgLoadedA || !imgLoadedB) {
-            throw new Error("OpenCV atau gambar belum siap.");
-        }
-
-        statusBox.textContent =
-            "Sedang menghitung fitur gambar...";
-
-        statusBox.className = "";
-
-        const ambang = Number(
-            document.getElementById("threshold").value
-        );
-
-        const zoom = Number(
-            document.getElementById("zoom").value
-        );
-
-        const fiturA = ekstrakFiturObjek("canvasA");
-        const fiturB = ekstrakFiturObjek("canvasB");
-
-        const hasil = verifikasiWajah(
-            fiturA,
-            fiturB,
-            ambang
-        );
-
-        box.className =
-            "result-box " +
-            (
-                hasil.keputusan === "COCOK"
-                ? "match"
-                : "no-match"
-            );
-
-        document.getElementById("decisionText").textContent =
-            "Keputusan Verifikasi: " + hasil.keputusan;
-
-        document.getElementById("scoreDetail").textContent =
-            "Skor Gabungan: " +
-            hasil.skorGabungan.toFixed(4) +
-            " | Threshold: " +
-            ambang.toFixed(2) +
-            " | Zoom B: " +
-            zoom.toFixed(2) + "x";
-
-        // TABEL FITUR
-        document.getElementById("metricsBody").innerHTML = `
-
-            <tr>
-                <td>Histogram RGB</td>
-                <td>192 fitur</td>
-                <td>192 fitur</td>
-                <td>${hasil.skorWarna.toFixed(4)}</td>
-            </tr>
-
-            <tr>
-                <td>Momen Hu (7 nilai)</td>
-                <td>7 fitur</td>
-                <td>7 fitur</td>
-                <td>${hasil.skorBentuk.toFixed(4)}</td>
-            </tr>
-
-            <tr>
-                <td>Luas Objek</td>
-                <td>${fiturA.bentukInfo.luas}</td>
-                <td>${fiturB.bentukInfo.luas}</td>
-                <td>-</td>
-            </tr>
-
-            <tr>
-                <td>Keliling Objek</td>
-                <td>${fiturA.bentukInfo.keliling}</td>
-                <td>${fiturB.bentukInfo.keliling}</td>
-                <td>-</td>
-            </tr>
-
-            <tr>
-                <td>Rasio Aspek</td>
-                <td>${fiturA.bentukInfo.rasioAspek}</td>
-                <td>${fiturB.bentukInfo.rasioAspek}</td>
-                <td>-</td>
-            </tr>
-
-        `;
-
-        // TABEL ROI
-        document.getElementById("roiBody").innerHTML = `
-
-            <tr>
-                <td>Posisi X</td>
-                <td>${fiturA.roiInfo.x}</td>
-                <td>${fiturB.roiInfo.x}</td>
-            </tr>
-
-            <tr>
-                <td>Posisi Y</td>
-                <td>${fiturA.roiInfo.y}</td>
-                <td>${fiturB.roiInfo.y}</td>
-            </tr>
-
-            <tr>
-                <td>Ukuran ROI</td>
-                <td>${fiturA.roiInfo.width} x ${fiturA.roiInfo.height}</td>
-                <td>${fiturB.roiInfo.width} x ${fiturB.roiInfo.height}</td>
-            </tr>
-
-        `;
-
-        // TABEL 7 MOMEN HU
-        let huHTML = "";
-
-        for (let i = 0; i < 7; i++) {
-
-            huHTML += `
-                <tr>
-                    <td>Hu ${i + 1}</td>
-                    <td>${fiturA.huVec[i].toFixed(5)}</td>
-                    <td>${fiturB.huVec[i].toFixed(5)}</td>
-                </tr>
-            `;
-
-        }
-
-        document.getElementById("huBody").innerHTML = huHTML;
-
-        // TABEL NCC
-        document.getElementById("nccBody").innerHTML = `
-
-            <tr>
-                <td>NCC Warna</td>
-                <td>${hasil.skorWarna.toFixed(5)}</td>
-            </tr>
-
-            <tr>
-                <td>NCC Bentuk</td>
-                <td>${hasil.skorBentuk.toFixed(5)}</td>
-            </tr>
-
-            <tr>
-                <td>NCC Gabungan</td>
-                <td>${hasil.skorGabungan.toFixed(5)}</td>
-            </tr>
-
-            <tr>
-                <td>Threshold</td>
-                <td>${ambang.toFixed(2)}</td>
-            </tr>
-
-            <tr>
-                <td>Zoom Gambar B</td>
-                <td>${zoom.toFixed(2)}x</td>
-            </tr>
-
-            <tr>
-                <td>Keputusan</td>
-                <td>${hasil.keputusan}</td>
-            </tr>
-
-        `;
-
-        statusBox.textContent = "Pengujian selesai.";
-        statusBox.className = "ready";
-
-    } catch (error) {
-
-        console.error(error);
-
-        box.className = "result-box no-match";
-
-        document.getElementById("decisionText").textContent =
-            "Terjadi kesalahan saat verifikasi";
-
-        document.getElementById("scoreDetail").textContent =
-            error.message;
-
-        statusBox.textContent =
-            "Error: " + error.message;
-
-        statusBox.className = "error";
-
+function verifikasiWajah() {
+    if (!cvSiap || !gambarA || !gambarB) {
+        tampilStatus("Tunggu OpenCV dan unggah kedua foto terlebih dahulu.");
+        return;
     }
 
+    try {
+        tampilStatus("Sedang memproses gambar...");
+
+        const fiturA = ekstrakFitur("canvasA", "roiA");
+        const fiturB = ekstrakFitur("canvasB", "roiB");
+
+        const skorWarna = ncc(fiturA.histogram, fiturB.histogram);
+
+        const skorHu = ncc(
+            fiturA.hu.map(v => Math.sign(v) * Math.log1p(Math.abs(v))),
+            fiturB.hu.map(v => Math.sign(v) * Math.log1p(Math.abs(v)))
+        );
+
+        const skor = 0.6 * skorWarna + 0.4 * skorHu;
+        const threshold = Number(document.getElementById("threshold").value);
+        const cocok = skor >= threshold;
+
+        const rotasi = document.getElementById("rotasi").value;
+        const zoom = document.getElementById("zoom").value;
+
+        document.getElementById("hasil").textContent =
+            cocok ? "WAJAH DINYATAKAN COCOK" : "WAJAH DINYATAKAN TIDAK COCOK";
+
+        document.getElementById("hasil").style.background =
+            cocok ? "#dcfce7" : "#fee2e2";
+
+        document.getElementById("metricsBody").innerHTML = `
+            <tr><td>Skor Histogram RGB</td><td>${skorWarna.toFixed(4)}</td></tr>
+            <tr><td>Skor Momen Hu</td><td>${skorHu.toFixed(4)}</td></tr>
+            <tr><td>Skor Gabungan NCC</td><td>${skor.toFixed(4)}</td></tr>
+            <tr><td>Threshold</td><td>${threshold.toFixed(2)}</td></tr>
+            <tr><td>Rotasi Foto B</td><td>${rotasi}°</td></tr>
+            <tr><td>Zoom Foto B</td><td>${zoom}x</td></tr>
+            <tr><td>Keputusan</td><td>${cocok ? "Cocok" : "Tidak cocok"}</td></tr>
+        `;
+
+        nomorUji++;
+        const riwayat = document.getElementById("riwayat");
+        if (nomorUji === 1) riwayat.innerHTML = "";
+
+        const baris = riwayat.insertRow();
+        [
+            nomorUji, rotasi + "°", zoom + "x",
+            threshold.toFixed(2), skor.toFixed(4),
+            cocok ? "Cocok" : "Tidak cocok"
+        ].forEach(teks => {
+            baris.insertCell().textContent = teks;
+        });
+
+        tampilStatus("Pengujian berhasil dilakukan.");
+    } catch (error) {
+        tampilStatus("Terjadi kesalahan: " + error.message);
+        console.error(error);
+    }
+}
+
+document.getElementById("btnVerifikasi")
+    .addEventListener("click", verifikasiWajah);
+
+document.getElementById("btnReset").addEventListener("click", function() {
+    gambarA = null;
+    gambarB = null;
+    nomorUji = 0;
+
+    ["canvasA", "canvasB", "roiA", "roiB"].forEach(id => {
+        const canvas = document.getElementById(id);
+        canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    document.getElementById("fileA").value = "";
+    document.getElementById("fileB").value = "";
+    document.getElementById("rotasi").value = 0;
+    document.getElementById("zoom").value = 1;
+    document.getElementById("threshold").value = 0.70;
+    document.getElementById("nilaiThreshold").textContent = "0.70";
+    document.getElementById("nilaiRotasi").textContent = "0°";
+    document.getElementById("nilaiZoom").textContent = "1.0x";
+    document.getElementById("hasil").textContent = "Belum dilakukan pengujian";
+    document.getElementById("metricsBody").innerHTML =
+        '<tr><td colspan="2">Belum ada data</td></tr>';
+    document.getElementById("riwayat").innerHTML =
+        '<tr><td colspan="6">Belum ada pengujian</td></tr>';
+
+    cekTombol();
+    tampilStatus("Pengujian direset.");
 });
-
 </script>
-
 </body>
 </html>
