@@ -33,12 +33,16 @@ h2 {
     gap: 15px;
 }
 
-.panel, .controls, .result {
+.panel, .controls {
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 14px;
+}
+
+.panel h3 {
+    font-size: 16px;
 }
 
 .preview {
@@ -84,6 +88,10 @@ button {
     cursor: pointer;
 }
 
+button:hover {
+    background: #174fb8;
+}
+
 .reset {
     background: #64748b;
 }
@@ -100,10 +108,28 @@ button {
     margin-bottom: 12px;
 }
 
+select {
+    padding: 7px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
 .result {
     display: none;
+    margin-top: 14px;
     background: #effbf3;
-    border: 1px solid #36c982;
+    border: 2px solid #36c982;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.result h3 {
+    margin-top: 0;
+    font-size: 18px;
+}
+
+.score {
+    margin-bottom: 15px;
 }
 
 table {
@@ -123,9 +149,23 @@ th {
     background: #e3eaf3;
 }
 
+.note {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 12px;
+}
+
 @media(max-width:700px) {
     .panels {
         grid-template-columns: 1fr;
+    }
+
+    .control-row {
+        align-items: flex-start;
+    }
+
+    table {
+        font-size: 11px;
     }
 }
 </style>
@@ -137,18 +177,24 @@ th {
 
 <h2>Sistem Verifikasi Wajah</h2>
 
+<!-- OBJEK A DAN B -->
+
 <div class="panels">
 
 <div class="panel">
 <h3>Objek A</h3>
+
 <div class="preview" id="previewA">
 Belum ada gambar
 </div>
+
 <input type="file" id="fileA" accept="image/*">
+
 </div>
 
 <div class="panel">
 <h3>Objek B</h3>
+
 <div class="preview" id="previewB">
 Belum ada gambar
 </div>
@@ -156,6 +202,7 @@ Belum ada gambar
 <input type="file" id="fileB" accept="image/*">
 
 <div class="transform">
+
 <label>
 Rotasi: <span id="rotVal">0</span>°
 <input type="range" id="rotation"
@@ -171,16 +218,23 @@ min="0.5" max="2" step="0.01" value="1">
 <button class="reset" onclick="resetTransform()">
 Reset Transformasi
 </button>
+
+</div>
+
+<p class="note">
+Rotasi/zoom diterapkan pada Objek B untuk uji invariansi.
+</p>
+
 </div>
 </div>
 
-</div>
+<!-- PENGATURAN -->
 
 <div class="controls">
 
 <div class="control-row">
 
-<label>Mode ROI:</label>
+<label><b>Mode ROI:</b></label>
 
 <select id="roi">
 <option>ROI Kulit (YCrCb + Kontur) – nilai tambah</option>
@@ -217,6 +271,12 @@ min="0" max="1" step="0.05" value="0">
 
 </div>
 
+</div>
+
+<!-- THRESHOLD -->
+
+<div class="controls">
+
 <div class="control-row">
 
 <label>
@@ -232,7 +292,10 @@ Jalankan Verifikasi Wajah
 </button>
 
 </div>
+
 </div>
+
+<!-- HASIL VERIFIKASI SEDERHANA -->
 
 <div class="result" id="result">
 
@@ -241,11 +304,11 @@ Keputusan Verifikasi:
 <span id="decision">COCOK</span>
 </h3>
 
-<p>
+<div class="score">
 <b>Skor Gabungan:</b>
 <span id="score">0.0000</span>
 (Ambang: <span id="usedThreshold">0.85</span>)
-</p>
+</div>
 
 <table>
 
@@ -262,23 +325,23 @@ Keputusan Verifikasi:
 
 <tr>
 <td>Histogram Warna (RGB 192-dim)</td>
-<td>Gambar A</td>
-<td>Gambar B</td>
+<td>Vektor 192 fitur</td>
+<td>Vektor 192 fitur</td>
 <td id="histScore">-</td>
 </tr>
 
 <tr>
 <td>Momen Hu (7 nilai, log)</td>
-<td>Belum dihitung</td>
-<td>Belum dihitung</td>
-<td>-</td>
+<td>7 nilai fitur</td>
+<td>7 nilai fitur</td>
+<td id="huScore">-</td>
 </tr>
 
 <tr>
 <td>LBP uniform (4×4×59 = 944-dim)</td>
-<td>Belum dihitung</td>
-<td>Belum dihitung</td>
-<td>-</td>
+<td>Vektor 944 fitur</td>
+<td>Vektor 944 fitur</td>
+<td id="lbpScore">-</td>
 </tr>
 
 <tr>
@@ -298,7 +361,7 @@ Keputusan Verifikasi:
 </tbody>
 </table>
 
-<p style="font-size:12px">
+<p class="note">
 Visualisasi ROI / mask yang digunakan.
 </p>
 
@@ -308,8 +371,12 @@ Visualisasi ROI / mask yang digunakan.
 
 <script>
 
+// MENYIMPAN GAMBAR
+
 let gambarA = null;
 let gambarB = null;
+
+// UPLOAD GAMBAR
 
 function upload(input, preview, callback) {
 
@@ -324,8 +391,10 @@ function upload(input, preview, callback) {
 
         img.onload = function() {
 
-            document.getElementById(preview).innerHTML = "";
-            document.getElementById(preview).appendChild(img);
+            const box = document.getElementById(preview);
+
+            box.innerHTML = "";
+            box.appendChild(img);
 
             callback(img);
         };
@@ -335,18 +404,23 @@ function upload(input, preview, callback) {
     });
 }
 
-upload("fileA", "previewA", img => gambarA = img);
-upload("fileB", "previewB", img => {
+upload("fileA", "previewA", function(img) {
+    gambarA = img;
+});
+
+upload("fileB", "previewB", function(img) {
     gambarB = img;
     transformasi();
 });
+
+// ROTASI DAN ZOOM
 
 function transformasi() {
 
     if (!gambarB) return;
 
-    let rot = document.getElementById("rotation").value;
-    let zoom = document.getElementById("zoom").value;
+    const rot = document.getElementById("rotation").value;
+    const zoom = document.getElementById("zoom").value;
 
     gambarB.style.transform =
     `rotate(${rot}deg) scale(${zoom})`;
@@ -370,6 +444,26 @@ function resetTransform() {
 
     transformasi();
 }
+
+// UPDATE NILAI SLIDER
+
+function updateSlider(id, output) {
+
+    document.getElementById(id)
+    .addEventListener("input", function() {
+
+        document.getElementById(output).innerText =
+        Number(this.value).toFixed(2);
+
+    });
+}
+
+updateSlider("warna", "warnaVal");
+updateSlider("hu", "huVal");
+updateSlider("bobotLbp", "lbpVal");
+updateSlider("threshold", "thresholdVal");
+
+// PERBANDINGAN KEMIRIPAN GAMBAR DEMO
 
 function similarity(img1, img2) {
 
@@ -410,11 +504,13 @@ function similarity(img1, img2) {
     return Math.max(0, 1 - total / (size * size));
 }
 
+// JALANKAN VERIFIKASI
+
 function verifikasi() {
 
     if (!gambarA || !gambarB) {
 
-        alert("Upload gambar A dan gambar B terlebih dahulu!");
+        alert("Silakan upload gambar A dan gambar B terlebih dahulu!");
         return;
     }
 
@@ -434,14 +530,21 @@ function verifikasi() {
     document.getElementById("usedThreshold").innerText =
     ambang.toFixed(2);
 
-    document.getElementById("histScore").innerText =
-    skor.toFixed(4);
-
     document.getElementById("decision").innerText =
     cocok ? "COCOK" : "TIDAK COCOK";
 
     document.getElementById("decision").style.color =
     cocok ? "green" : "red";
+
+    document.getElementById("histScore").innerText =
+    skor.toFixed(4);
+
+    document.getElementById("huScore").innerText =
+    "Belum dihitung";
+
+    document.getElementById("lbpScore").innerText =
+    document.getElementById("lbp").checked
+    ? "Belum dihitung" : "Tidak digunakan";
 
     document.getElementById("roiA").innerText =
     document.getElementById("roi").value;
@@ -449,13 +552,6 @@ function verifikasi() {
     document.getElementById("roiB").innerText =
     document.getElementById("roi").value;
 
-    document.getElementById("lbpA").innerText =
-    document.getElementById("lbp").checked
-    ? "Belum dihitung" : "Tidak digunakan";
-
-    document.getElementById("lbpB").innerText =
-    document.getElementById("lbp").checked
-    ? "Belum dihitung" : "Tidak digunakan";
 }
 
 </script>
