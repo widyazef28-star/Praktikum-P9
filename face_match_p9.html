@@ -321,15 +321,17 @@ function ekstrakFiturObjek(canvasId) {
             chVec.push_back(channel);
 
             // Urutan parameter calcHist yang benar
-            cv.calcHist(
-                chVec,
-                [0],
-                mask,
-                histSize,
-                ranges,
-                hist,
-                false
-            );
+            
+                cv.calcHist(
+                    chVec,
+                    [0],
+                    mask,
+                    hist,
+                    histSize,
+                    ranges,
+                    false
+                );
+
 
             cv.normalize(
                 hist,
