@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sistem Verifikasi Wajah</title>
+
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#f4f6fa;color:#263445;margin:0;padding:25px}
@@ -18,7 +19,7 @@ input[type=file]{width:100%;margin-top:10px}
 .transform label{display:block;margin-bottom:8px}
 input[type=range]{accent-color:#087bea}
 button{background:#2463d8;color:white;border:0;padding:10px 16px;border-radius:5px;cursor:pointer}
-button:disabled{opacity:.5}
+button:disabled{opacity:.5;cursor:wait}
 .reset{background:#64748b}
 .controls{background:#eef3f9}
 .control-row{display:flex;flex-wrap:wrap;align-items:center;gap:15px;margin-bottom:12px}
@@ -36,6 +37,7 @@ th{background:#e3eaf3}
 }
 </style>
 </head>
+
 <body>
 <div class="container">
 
@@ -58,9 +60,11 @@ th{background:#e3eaf3}
    <label>Rotasi: <span id="rotVal">0</span>°
     <input type="range" id="rotation" min="-180" max="180" value="0">
    </label>
+
    <label>Zoom: <span id="zoomVal">1.00</span>x
     <input type="range" id="zoom" min="0.5" max="2" step="0.01" value="1">
    </label>
+
    <button class="reset" id="resetBtn">Reset Transformasi</button>
   </div>
  </div>
@@ -95,6 +99,7 @@ th{background:#e3eaf3}
   <label>Ambang (Threshold): <span id="thresholdVal">0.85</span>
    <input type="range" id="threshold" min="0" max="1" step="0.01" value="0.85">
   </label>
+
   <button id="verify">Jalankan Verifikasi Wajah</button>
  </div>
 </div>
@@ -113,6 +118,7 @@ th{background:#e3eaf3}
     <th>Skor</th>
    </tr>
   </thead>
+
   <tbody>
    <tr>
     <td>Histogram Warna RGB (192 fitur)</td>
@@ -120,24 +126,28 @@ th{background:#e3eaf3}
     <td>192 nilai</td>
     <td id="histScore">-</td>
    </tr>
+
    <tr>
     <td>Momen Hu (7 nilai, log)</td>
     <td id="huA">-</td>
     <td id="huB">-</td>
     <td id="huScore">-</td>
    </tr>
+
    <tr>
     <td>LBP Uniform (944 fitur)</td>
     <td id="lbpA">-</td>
     <td id="lbpB">-</td>
     <td id="lbpScore">-</td>
    </tr>
+
    <tr>
     <td>Geometri Kontur Utama</td>
     <td id="geoA">-</td>
     <td id="geoB">-</td>
     <td id="geoScore">-</td>
    </tr>
+
    <tr>
     <td>ROI Kulit (YCrCb)</td>
     <td id="roiA">-</td>
@@ -149,8 +159,9 @@ th{background:#e3eaf3}
 
  <p class="note">
   Skor gabungan dihitung dari Histogram RGB, Hu, dan LBP sesuai bobot.
-  Geometri dan ROI merupakan skor tambahan. Sistem ini adalah prototipe
-  perbandingan fitur gambar, bukan pengenal identitas biometrik tervalidasi.
+  Geometri dan ROI merupakan skor tambahan.
+  Sistem ini adalah prototipe perbandingan fitur gambar,
+  bukan pengenal identitas biometrik tervalidasi.
  </p>
 </div>
 
@@ -160,6 +171,7 @@ th{background:#e3eaf3}
 "use strict";
 
 const $ = id => document.getElementById(id);
+
 let imageA = null;
 let imageB = null;
 
@@ -168,8 +180,8 @@ let imageB = null;
 ========================= */
 
 function upload(id, preview, callback) {
- $(id).addEventListener("change", e => {
-  const file = e.target.files[0];
+ $(id).addEventListener("change", event => {
+  const file = event.target.files[0];
   if (!file) return;
 
   if (!file.type.startsWith("image/")) {
@@ -185,6 +197,7 @@ function upload(id, preview, callback) {
    callback(img);
    URL.revokeObjectURL(url);
    $("status").textContent = "Gambar berhasil dimuat.";
+   $("result").style.display = "none";
   };
 
   img.onerror = () => {
@@ -196,7 +209,10 @@ function upload(id, preview, callback) {
  });
 }
 
-upload("fileA", "previewA", img => imageA = img);
+upload("fileA", "previewA", img => {
+ imageA = img;
+});
+
 upload("fileB", "previewB", img => {
  imageB = img;
  updateTransform();
@@ -207,14 +223,15 @@ upload("fileB", "previewB", img => {
 ========================= */
 
 function updateTransform() {
- const r = Number($("rotation").value);
- const z = Number($("zoom").value);
+ const rotation = Number($("rotation").value);
+ const zoom = Number($("zoom").value);
 
- $("rotVal").textContent = r;
- $("zoomVal").textContent = z.toFixed(2);
+ $("rotVal").textContent = rotation;
+ $("zoomVal").textContent = zoom.toFixed(2);
 
  if (imageB) {
-  imageB.style.transform = `rotate(${r}deg) scale(${z})`;
+  imageB.style.transform =
+   `rotate(${rotation}deg) scale(${zoom})`;
  }
 }
 
@@ -236,9 +253,10 @@ $("resetBtn").addEventListener("click", () => {
  ["hu","huVal"],
  ["bobotLbp","lbpVal"],
  ["threshold","thresholdVal"]
-].forEach(([id,out]) => {
+].forEach(([id, output]) => {
  $(id).addEventListener("input", () => {
-  $(out).textContent = Number($(id).value).toFixed(2);
+  $(output).textContent =
+   Number($(id).value).toFixed(2);
  });
 });
 
@@ -248,11 +266,12 @@ $("resetBtn").addEventListener("click", () => {
 
 function buatCanvas(img, isB = false) {
  if (!img || !img.complete || !img.naturalWidth) {
-  throw Error("Gambar belum selesai dimuat.");
+  throw new Error("Gambar belum selesai dimuat.");
  }
 
  const size = 160;
  const canvas = document.createElement("canvas");
+
  canvas.width = size;
  canvas.height = size;
 
@@ -260,8 +279,12 @@ function buatCanvas(img, isB = false) {
   willReadFrequently: true
  });
 
+ if (!ctx) {
+  throw new Error("Canvas tidak dapat dibuat.");
+ }
+
  ctx.fillStyle = "white";
- ctx.fillRect(0,0,size,size);
+ ctx.fillRect(0, 0, size, size);
 
  const scale = Math.min(
   size / img.naturalWidth,
@@ -272,30 +295,36 @@ function buatCanvas(img, isB = false) {
  const dh = img.naturalHeight * scale;
 
  ctx.save();
- ctx.translate(size/2,size/2);
+ ctx.translate(size / 2, size / 2);
 
  if (isB) {
-  ctx.rotate(Number($("rotation").value)*Math.PI/180);
-  ctx.scale(Number($("zoom").value),Number($("zoom").value));
+  ctx.rotate(
+   Number($("rotation").value) * Math.PI / 180
+  );
+
+  ctx.scale(
+   Number($("zoom").value),
+   Number($("zoom").value)
+  );
  }
 
- ctx.drawImage(img,-dw/2,-dh/2,dw,dh);
+ ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
  ctx.restore();
 
- return ctx.getImageData(0,0,size,size);
+ return ctx.getImageData(0, 0, size, size);
 }
 
 /* =========================
-   KONVERSI RGB KE YCrCb
-   PERHITUNGAN MANUAL
+   RGB KE YCrCb MANUAL
+   TIDAK MENGGUNAKAN OPENCV
 ========================= */
 
-function rgbToYCrCb(r,g,b) {
- const y = 0.299*r + 0.587*g + 0.114*b;
- const cr = (r-y)*0.713 + 128;
- const cb = (b-y)*0.564 + 128;
+function rgbToYCrCb(r, g, b) {
+ const y = 0.299 * r + 0.587 * g + 0.114 * b;
+ const cr = (r - y) * 0.713 + 128;
+ const cb = (b - y) * 0.564 + 128;
 
- return {y,cr,cb};
+ return { y, cr, cb };
 }
 
 /* =========================
@@ -307,59 +336,81 @@ function ambilROI(imageData) {
  const H = imageData.height;
  const data = imageData.data;
 
- let x1 = W, y1 = H, x2 = -1, y2 = -1;
+ let x1 = W;
+ let y1 = H;
+ let x2 = -1;
+ let y2 = -1;
+
  let skinCount = 0;
 
  if ($("roiMode").value === "skin") {
-  for (let y=0; y<H; y++) {
-   for (let x=0; x<W; x++) {
-    const i = (y*W+x)*4;
-    const {cr,cb} = rgbToYCrCb(
-     data[i],data[i+1],data[i+2]
+  for (let y = 0; y < H; y++) {
+   for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4;
+
+    const { cr, cb } = rgbToYCrCb(
+     data[i],
+     data[i + 1],
+     data[i + 2]
     );
 
-    if (cr>=133 && cr<=173 && cb>=77 && cb<=127) {
+    if (
+     cr >= 133 && cr <= 173 &&
+     cb >= 77 && cb <= 127
+    ) {
      skinCount++;
-     x1=Math.min(x1,x);
-     y1=Math.min(y1,y);
-     x2=Math.max(x2,x);
-     y2=Math.max(y2,y);
+
+     x1 = Math.min(x1, x);
+     y1 = Math.min(y1, y);
+     x2 = Math.max(x2, x);
+     y2 = Math.max(y2, y);
     }
    }
   }
  }
 
- const skinPercent = skinCount/(W*H)*100;
+ const skinPercent = skinCount / (W * H) * 100;
+
  let detected = false;
 
- if (x2>=x1 && y2>=y1 && skinCount>W*H*0.01) {
+ if (
+  x2 >= x1 &&
+  y2 >= y1 &&
+  skinCount > W * H * 0.01
+ ) {
   detected = true;
  } else {
-  x1=0;y1=0;x2=W-1;y2=H-1;
+  x1 = 0;
+  y1 = 0;
+  x2 = W - 1;
+  y2 = H - 1;
  }
 
- const w=x2-x1+1;
- const h=y2-y1+1;
+ const w = x2 - x1 + 1;
+ const h = y2 - y1 + 1;
 
- const output = new Uint8ClampedArray(w*h*4);
+ const output = new Uint8ClampedArray(w * h * 4);
 
- for(let y=0;y<h;y++) {
-  for(let x=0;x<w;x++) {
-   const source=((y+y1)*W+(x+x1))*4;
-   const target=(y*w+x)*4;
+ for (let y = 0; y < h; y++) {
+  for (let x = 0; x < w; x++) {
+   const source = ((y + y1) * W + (x + x1)) * 4;
+   const target = (y * w + x) * 4;
 
-   output[target]=data[source];
-   output[target+1]=data[source+1];
-   output[target+2]=data[source+2];
-   output[target+3]=255;
+   output[target] = data[source];
+   output[target + 1] = data[source + 1];
+   output[target + 2] = data[source + 2];
+   output[target + 3] = 255;
   }
  }
 
  return {
-  imageData:new ImageData(output,w,h),
-  info:{
-   x:x1,y:y1,w,h,
-   percent:w*h/(W*H)*100,
+  imageData: new ImageData(output, w, h),
+  info: {
+   x: x1,
+   y: y1,
+   w,
+   h,
+   percent: (w * h) / (W * H) * 100,
    skinPercent,
    detected
   }
@@ -367,22 +418,30 @@ function ambilROI(imageData) {
 }
 
 /* =========================
-   HISTOGRAM RGB 192 FITUR
+   HISTOGRAM RGB
+   3 CHANNEL x 64 BIN = 192
 ========================= */
 
 function histogramRGB(imageData) {
- const hist=new Array(192).fill(0);
- const data=imageData.data;
- let total=0;
+ const hist = new Array(192).fill(0);
+ const data = imageData.data;
 
- for(let i=0;i<data.length;i+=4) {
-  hist[Math.floor(data[i]/4)]++;
-  hist[64+Math.floor(data[i+1]/4)]++;
-  hist[128+Math.floor(data[i+2]/4)]++;
+ let total = 0;
+
+ for (let i = 0; i < data.length; i += 4) {
+  hist[Math.min(63, Math.floor(data[i] / 4))]++;
+  hist[64 + Math.min(63, Math.floor(data[i + 1] / 4))]++;
+  hist[128 + Math.min(63, Math.floor(data[i + 2] / 4))]++;
   total++;
  }
 
- return hist.map(v=>v/total);
+ if (total > 0) {
+  for (let i = 0; i < hist.length; i++) {
+   hist[i] /= total;
+  }
+ }
+
+ return hist;
 }
 
 /* =========================
@@ -390,15 +449,18 @@ function histogramRGB(imageData) {
 ========================= */
 
 function grayscale(imageData) {
- const data=imageData.data;
- const result=new Uint8Array(imageData.width*imageData.height);
+ const data = imageData.data;
+ const result = new Uint8Array(
+  imageData.width * imageData.height
+ );
 
- for(let i=0;i<result.length;i++) {
-  const j=i*4;
-  result[i]=Math.round(
-   0.299*data[j]+
-   0.587*data[j+1]+
-   0.114*data[j+2]
+ for (let i = 0; i < result.length; i++) {
+  const j = i * 4;
+
+  result[i] = Math.round(
+   0.299 * data[j] +
+   0.587 * data[j + 1] +
+   0.114 * data[j + 2]
   );
  }
 
@@ -406,34 +468,46 @@ function grayscale(imageData) {
 }
 
 /* =========================
-   THRESHOLD OT SU
+   OTSU THRESHOLD
 ========================= */
 
 function otsuThreshold(gray) {
- const hist=new Array(256).fill(0);
- for(let i=0;i<gray.length;i++)hist[gray[i]]++;
+ const hist = new Array(256).fill(0);
 
- let sum=0;
- for(let i=0;i<256;i++)sum+=i*hist[i];
+ for (let i = 0; i < gray.length; i++) {
+  hist[gray[i]]++;
+ }
 
- let sumB=0,wB=0,wF=0,maxVariance=0,threshold=127;
+ let sum = 0;
 
- for(let t=0;t<256;t++) {
-  wB+=hist[t];
-  if(wB===0)continue;
+ for (let i = 0; i < 256; i++) {
+  sum += i * hist[i];
+ }
 
-  wF=gray.length-wB;
-  if(wF===0)break;
+ let sumB = 0;
+ let weightB = 0;
+ let maxVariance = 0;
+ let threshold = 127;
 
-  sumB+=t*hist[t];
+ for (let t = 0; t < 256; t++) {
+  weightB += hist[t];
 
-  const meanB=sumB/wB;
-  const meanF=(sum-sumB)/wF;
-  const variance=wB*wF*(meanB-meanF)**2;
+  if (weightB === 0) continue;
 
-  if(variance>maxVariance) {
-   maxVariance=variance;
-   threshold=t;
+  const weightF = gray.length - weightB;
+  if (weightF === 0) break;
+
+  sumB += t * hist[t];
+
+  const meanB = sumB / weightB;
+  const meanF = (sum - sumB) / weightF;
+
+  const variance =
+   weightB * weightF * (meanB - meanF) ** 2;
+
+  if (variance > maxVariance) {
+   maxVariance = variance;
+   threshold = t;
   }
  }
 
@@ -441,136 +515,176 @@ function otsuThreshold(gray) {
 }
 
 /* =========================
-   MOMEN HU 7 NILAI
+   MOMEN HU
+   7 NILAI
 ========================= */
 
-function hitungHu(gray,w,h) {
- const threshold=otsuThreshold(gray);
- const binary=new Uint8Array(gray.length);
+function hitungHu(gray, w, h) {
+ const threshold = otsuThreshold(gray);
+ const binary = new Uint8Array(gray.length);
 
- for(let i=0;i<gray.length;i++) {
-  binary[i]=gray[i]>threshold?1:0;
+ for (let i = 0; i < gray.length; i++) {
+  binary[i] = gray[i] > threshold ? 1 : 0;
  }
 
- let m00=0,m10=0,m01=0;
+ let m00 = 0;
+ let m10 = 0;
+ let m01 = 0;
 
- for(let y=0;y<h;y++) {
-  for(let x=0;x<w;x++) {
-   if(binary[y*w+x]) {
+ for (let y = 0; y < h; y++) {
+  for (let x = 0; x < w; x++) {
+   if (binary[y * w + x]) {
     m00++;
-    m10+=x;
-    m01+=y;
+    m10 += x;
+    m01 += y;
    }
   }
  }
 
- if(m00===0)return new Array(7).fill(0);
+ if (m00 === 0) {
+  return new Array(7).fill(0);
+ }
 
- const cx=m10/m00;
- const cy=m01/m00;
+ const cx = m10 / m00;
+ const cy = m01 / m00;
 
- function eta(p,q) {
-  let sum=0;
-  for(let y=0;y<h;y++) {
-   for(let x=0;x<w;x++) {
-    if(binary[y*w+x]) {
-     sum+=Math.pow(x-cx,p)*Math.pow(y-cy,q);
+ function eta(p, q) {
+  let sum = 0;
+
+  for (let y = 0; y < h; y++) {
+   for (let x = 0; x < w; x++) {
+    if (binary[y * w + x]) {
+     sum +=
+      Math.pow(x - cx, p) *
+      Math.pow(y - cy, q);
     }
    }
   }
 
-  const mu=sum;
-  const gamma=(p+q)/2+1;
-  return mu/Math.pow(m00,gamma);
+  const gamma = (p + q) / 2 + 1;
+
+  return sum / Math.pow(m00, gamma);
  }
 
- const n20=eta(2,0);
- const n02=eta(0,2);
- const n11=eta(1,1);
- const n30=eta(3,0);
- const n12=eta(1,2);
- const n21=eta(2,1);
- const n03=eta(0,3);
+ const n20 = eta(2, 0);
+ const n02 = eta(0, 2);
+ const n11 = eta(1, 1);
+ const n30 = eta(3, 0);
+ const n12 = eta(1, 2);
+ const n21 = eta(2, 1);
+ const n03 = eta(0, 3);
 
- const a=n30-3*n12;
- const b=3*n21-n03;
- const c=n30+n12;
- const d=n21+n03;
+ const a = n30 - 3 * n12;
+ const b = 3 * n21 - n03;
+ const c = n30 + n12;
+ const d = n21 + n03;
 
- const hu=[
-  n20+n02,
-  (n20-n02)**2+4*n11**2,
-  a*a+b*b,
-  c*c+d*d,
-  a*c*(c*c-3*d*d)+b*d*(3*c*c-d*d),
-  (n20-n02)*(c*c-d*d)+4*n11*c*d,
-  b*c*(c*c-3*d*d)-a*d*(3*c*c-d*d)
+ const hu = [
+  n20 + n02,
+
+  (n20 - n02) ** 2 + 4 * n11 ** 2,
+
+  a * a + b * b,
+
+  c * c + d * d,
+
+  a * c * (c * c - 3 * d * d) +
+   b * d * (3 * c * c - d * d),
+
+  (n20 - n02) * (c * c - d * d) +
+   4 * n11 * c * d,
+
+  b * c * (c * c - 3 * d * d) -
+   a * d * (3 * c * c - d * d)
  ];
 
- return hu.map(v=>
-  !Number.isFinite(v)||v===0?0:
-  -Math.sign(v)*Math.log10(Math.abs(v))
- );
+ return hu.map(v => {
+  if (!Number.isFinite(v) || v === 0) return 0;
+  return -Math.sign(v) * Math.log10(Math.abs(v));
+ });
 }
 
 /* =========================
-   LBP UNIFORM 944 FITUR
+   LBP UNIFORM
+   16 CELL x 59 BIN = 944
 ========================= */
 
-const uniformMap=(()=>{
- const map=new Array(256);
- let index=0;
+const uniformMap = (() => {
+ const map = new Array(256);
 
- for(let p=0;p<256;p++) {
-  let transitions=0;
+ for (let pattern = 0; pattern < 256; pattern++) {
+  let transitions = 0;
 
-  for(let i=0;i<8;i++) {
-   if(((p>>i)&1)!==((p>>((i+1)%8))&1)) {
-    transitions++;
-   }
+  for (let i = 0; i < 8; i++) {
+   const current = (pattern >> i) & 1;
+   const next = (pattern >> ((i + 1) % 8)) & 1;
+
+   if (current !== next) transitions++;
   }
 
-  map[p]=transitions<=2?index++:58;
+  if (transitions <= 2) {
+   map[pattern] = -1;
+  } else {
+   map[pattern] = 58;
+  }
+ }
+
+ // Beri indeks unik untuk 58 pola uniform.
+ let index = 0;
+
+ for (let pattern = 0; pattern < 256; pattern++) {
+  if (map[pattern] === -1) {
+   map[pattern] = index++;
+  }
  }
 
  return map;
 })();
 
-function hitungLBP(gray,w,h) {
- const result=new Array(944).fill(0);
+function hitungLBP(gray, w, h) {
+ const result = new Array(944).fill(0);
 
- const neighbors=[
-  [-1,-1],[0,-1],[1,-1],[1,0],
-  [1,1],[0,1],[-1,1],[-1,0]
+ const neighbors = [
+  [-1,-1], [0,-1], [1,-1], [1,0],
+  [1,1], [0,1], [-1,1], [-1,0]
  ];
 
- for(let y=1;y<h-1;y++) {
-  for(let x=1;x<w-1;x++) {
-   const center=gray[y*w+x];
-   let code=0;
+ for (let y = 1; y < h - 1; y++) {
+  for (let x = 1; x < w - 1; x++) {
+   const center = gray[y * w + x];
+   let code = 0;
 
-   for(let i=0;i<8;i++) {
-    const [dx,dy]=neighbors[i];
-    if(gray[(y+dy)*w+x+dx]>=center) {
-     code|=1<<i;
+   for (let i = 0; i < 8; i++) {
+    const [dx, dy] = neighbors[i];
+
+    if (gray[(y + dy) * w + x + dx] >= center) {
+     code |= 1 << i;
     }
    }
 
-   const cx=Math.min(3,Math.floor(x*4/w));
-   const cy=Math.min(3,Math.floor(y*4/h));
+   const cellX = Math.min(3, Math.floor(x * 4 / w));
+   const cellY = Math.min(3, Math.floor(y * 4 / h));
 
-   result[(cy*4+cx)*59+uniformMap[code]]++;
+   const cell = cellY * 4 + cellX;
+   const bin = uniformMap[code];
+
+   result[cell * 59 + bin]++;
   }
  }
 
- for(let cell=0;cell<16;cell++) {
-  const start=cell*59;
-  let sum=0;
+ // Normalisasi setiap cell.
+ for (let cell = 0; cell < 16; cell++) {
+  const start = cell * 59;
+  let sum = 0;
 
-  for(let j=0;j<59;j++)sum+=result[start+j];
+  for (let j = 0; j < 59; j++) {
+   sum += result[start + j];
+  }
 
-  if(sum>0) {
-   for(let j=0;j<59;j++)result[start+j]/=sum;
+  if (sum > 0) {
+   for (let j = 0; j < 59; j++) {
+    result[start + j] /= sum;
+   }
   }
  }
 
@@ -578,73 +692,90 @@ function hitungLBP(gray,w,h) {
 }
 
 /* =========================
-   GEOMETRI KONTUR
-   KOMPONEN TERHUBUNG TERBESAR
+   GEOMETRI KOMPONEN TERBESAR
 ========================= */
 
-function hitungGeometri(gray,w,h) {
- const threshold=otsuThreshold(gray);
- const mask=new Uint8Array(gray.length);
+function hitungGeometri(gray, w, h) {
+ const threshold = otsuThreshold(gray);
+ const mask = new Uint8Array(gray.length);
 
- for(let i=0;i<gray.length;i++) {
-  mask[i]=gray[i]>threshold?1:0;
+ for (let i = 0; i < gray.length; i++) {
+  mask[i] = gray[i] > threshold ? 1 : 0;
  }
 
- const visited=new Uint8Array(mask.length);
- let best=null;
+ const visited = new Uint8Array(mask.length);
+ let best = null;
 
- for(let start=0;start<mask.length;start++) {
-  if(!mask[start]||visited[start])continue;
+ const directions = [
+  [0,-1], [1,0], [0,1], [-1,0]
+ ];
 
-  const queue=[start];
-  visited[start]=1;
+ for (let start = 0; start < mask.length; start++) {
+  if (!mask[start] || visited[start]) continue;
 
-  let area=0,minX=w,maxX=0,minY=h,maxY=0,perimeter=0;
+  const queue = [start];
+  visited[start] = 1;
 
-  for(let q=0;q<queue.length;q++) {
-   const pos=queue[q];
-   const x=pos%w;
-   const y=Math.floor(pos/w);
+  let area = 0;
+  let perimeter = 0;
+
+  let minX = w;
+  let maxX = 0;
+  let minY = h;
+  let maxY = 0;
+
+  for (let q = 0; q < queue.length; q++) {
+   const pos = queue[q];
+   const x = pos % w;
+   const y = Math.floor(pos / w);
 
    area++;
-   minX=Math.min(minX,x);
-   maxX=Math.max(maxX,x);
-   minY=Math.min(minY,y);
-   maxY=Math.max(maxY,y);
 
-   const directions=[
-    [0,-1],[1,0],[0,1],[-1,0]
-   ];
+   minX = Math.min(minX, x);
+   maxX = Math.max(maxX, x);
+   minY = Math.min(minY, y);
+   maxY = Math.max(maxY, y);
 
-   for(const [dx,dy] of directions) {
-    const nx=x+dx,ny=y+dy;
+   for (const [dx, dy] of directions) {
+    const nx = x + dx;
+    const ny = y + dy;
 
-    if(nx<0||nx>=w||ny<0||ny>=h) {
+    if (
+     nx < 0 || nx >= w ||
+     ny < 0 || ny >= h
+    ) {
      perimeter++;
      continue;
     }
 
-    const ni=ny*w+nx;
+    const next = ny * w + nx;
 
-    if(!mask[ni]) {
+    if (!mask[next]) {
      perimeter++;
-    } else if(!visited[ni]) {
-     visited[ni]=1;
-     queue.push(ni);
+    } else if (!visited[next]) {
+     visited[next] = 1;
+     queue.push(next);
     }
    }
   }
 
-  if(!best||area>best.area) {
-   best={
+  if (!best || area > best.area) {
+   const boxWidth = maxX - minX + 1;
+   const boxHeight = maxY - minY + 1;
+
+   best = {
     area,
     perimeter,
-    ratio:(maxX-minX+1)/(maxY-minY+1)
+    ratio: boxWidth / boxHeight
    };
   }
  }
 
- return best||{area:0,perimeter:0,ratio:0};
+ return best || {
+  area: 0,
+  perimeter: 0,
+  ratio: 0
+ };
 }
 
 /* =========================
@@ -652,17 +783,19 @@ function hitungGeometri(gray,w,h) {
 ========================= */
 
 function ekstraksi(imageData) {
- const roi=ambilROI(imageData);
- const data=roi.imageData;
- const gray=grayscale(data);
- const w=data.width,h=data.height;
+ const roi = ambilROI(imageData);
+ const data = roi.imageData;
+
+ const gray = grayscale(data);
+ const w = data.width;
+ const h = data.height;
 
  return {
-  hist:histogramRGB(data),
-  hu:hitungHu(gray,w,h),
-  lbp:hitungLBP(gray,w,h),
-  geo:hitungGeometri(gray,w,h),
-  roi:roi.info
+  hist: histogramRGB(data),
+  hu: hitungHu(gray, w, h),
+  lbp: hitungLBP(gray, w, h),
+  geo: hitungGeometri(gray, w, h),
+  roi: roi.info
  };
 }
 
@@ -670,153 +803,192 @@ function ekstraksi(imageData) {
    SKOR KEMIRIPAN
 ========================= */
 
-function ncc(a,b) {
- const ma=a.reduce((s,v)=>s+v,0)/a.length;
- const mb=b.reduce((s,v)=>s+v,0)/b.length;
-
- let num=0,da=0,db=0;
-
- for(let i=0;i<a.length;i++) {
-  const x=a[i]-ma;
-  const y=b[i]-mb;
-
-  num+=x*y;
-  da+=x*x;
-  db+=y*y;
+function ncc(a, b) {
+ if (a.length !== b.length || a.length === 0) {
+  throw new Error("Panjang fitur tidak sama.");
  }
 
- if(da===0||db===0) {
-  return a.every((v,i)=>v===b[i])?1:0;
+ const meanA = a.reduce((s, v) => s + v, 0) / a.length;
+ const meanB = b.reduce((s, v) => s + v, 0) / b.length;
+
+ let numerator = 0;
+ let denominatorA = 0;
+ let denominatorB = 0;
+
+ for (let i = 0; i < a.length; i++) {
+  const x = a[i] - meanA;
+  const y = b[i] - meanB;
+
+  numerator += x * y;
+  denominatorA += x * x;
+  denominatorB += y * y;
  }
 
- return Math.max(0,Math.min(1,
-  (num/Math.sqrt(da*db)+1)/2
- ));
+ if (denominatorA === 0 || denominatorB === 0) {
+  return a.every((v, i) => v === b[i]) ? 1 : 0;
+ }
+
+ const correlation =
+  numerator / Math.sqrt(denominatorA * denominatorB);
+
+ return Math.max(0, Math.min(1, (correlation + 1) / 2));
 }
 
-function skorHu(a,b) {
- let diff=0;
- for(let i=0;i<7;i++)diff+=Math.abs(a[i]-b[i]);
- return 1/(1+diff/7);
+function skorHu(a, b) {
+ let difference = 0;
+
+ for (let i = 0; i < 7; i++) {
+  difference += Math.abs(a[i] - b[i]);
+ }
+
+ return 1 / (1 + difference / 7);
 }
 
-function similarityNumber(a,b) {
+function similarityNumber(a, b) {
  return Math.max(
   0,
-  1-Math.abs(a-b)/Math.max(Math.abs(a),Math.abs(b),0.000001)
+  1 - Math.abs(a - b) /
+  Math.max(Math.abs(a), Math.abs(b), 0.000001)
  );
 }
 
-function geometrySimilarity(a,b) {
+function geometrySimilarity(a, b) {
  return (
-  similarityNumber(a.area,b.area)+
-  similarityNumber(a.perimeter,b.perimeter)+
-  similarityNumber(a.ratio,b.ratio)
- )/3;
+  similarityNumber(a.area, b.area) +
+  similarityNumber(a.perimeter, b.perimeter) +
+  similarityNumber(a.ratio, b.ratio)
+ ) / 3;
 }
 
-function roiSimilarity(a,b) {
+function roiSimilarity(a, b) {
  return (
-  similarityNumber(a.percent,b.percent)+
-  similarityNumber(a.skinPercent,b.skinPercent)
- )/2;
+  similarityNumber(a.percent, b.percent) +
+  similarityNumber(a.skinPercent, b.skinPercent)
+ ) / 2;
 }
 
 /* =========================
-   TAMPILKAN HASIL
+   MENAMPILKAN HASIL
 ========================= */
 
-function tampilkanHasil(A,B) {
- const sw=ncc(A.hist,B.hist);
- const sh=skorHu(A.hu,B.hu);
- const sl=ncc(A.lbp,B.lbp);
- const sg=geometrySimilarity(A.geo,B.geo);
- const sr=roiSimilarity(A.roi,B.roi);
+function tampilkanHasil(A, B) {
+ const scoreHist = ncc(A.hist, B.hist);
+ const scoreHu = skorHu(A.hu, B.hu);
+ const scoreLbp = ncc(A.lbp, B.lbp);
+ const scoreGeo = geometrySimilarity(A.geo, B.geo);
+ const scoreRoi = roiSimilarity(A.roi, B.roi);
 
- const ww=Number($("warna").value);
- const wh=Number($("hu").value);
- const wl=Number($("bobotLbp").value);
- const useLbp=$("lbpEnabled").checked;
+ const weightColor = Number($("warna").value);
+ const weightHu = Number($("hu").value);
+ const weightLbp = Number($("bobotLbp").value);
 
- const total=ww+wh+(useLbp?wl:0);
+ const useLbp = $("lbpEnabled").checked;
 
- if(total===0) {
-  throw Error("Atur minimal satu bobot fitur lebih dari 0.");
+ const totalWeight =
+  weightColor + weightHu + (useLbp ? weightLbp : 0);
+
+ if (totalWeight === 0) {
+  throw new Error("Atur minimal satu bobot fitur lebih dari 0.");
  }
 
- const score=(
-  sw*ww+sh*wh+(useLbp?sl*wl:0)
- )/total;
+ const finalScore = (
+  scoreHist * weightColor +
+  scoreHu * weightHu +
+  (useLbp ? scoreLbp * weightLbp : 0)
+ ) / totalWeight;
 
- const threshold=Number($("threshold").value);
+ const threshold = Number($("threshold").value);
+ const matched = finalScore >= threshold;
 
- $("result").style.display="block";
- $("score").textContent=score.toFixed(4);
- $("usedThreshold").textContent=threshold.toFixed(2);
+ $("result").style.display = "block";
 
- $("decision").textContent=score>=threshold?"COCOK":"TIDAK COCOK";
- $("decision").style.color=score>=threshold?"green":"red";
+ $("score").textContent = finalScore.toFixed(4);
+ $("usedThreshold").textContent = threshold.toFixed(2);
 
- $("histScore").textContent=sw.toFixed(4);
+ $("decision").textContent =
+  matched ? "COCOK" : "TIDAK COCOK";
 
- $("huA").textContent=A.hu.map(v=>v.toFixed(3)).join(", ");
- $("huB").textContent=B.hu.map(v=>v.toFixed(3)).join(", ");
- $("huScore").textContent=sh.toFixed(4);
+ $("decision").style.color =
+  matched ? "green" : "red";
 
- $("lbpA").textContent=useLbp?"944 fitur dihitung":"Tidak digunakan";
- $("lbpB").textContent=useLbp?"944 fitur dihitung":"Tidak digunakan";
- $("lbpScore").textContent=useLbp?sl.toFixed(4):"Tidak digunakan";
+ $("histScore").textContent = scoreHist.toFixed(4);
 
- $("geoA").textContent=
+ $("huA").textContent =
+  A.hu.map(v => v.toFixed(3)).join(", ");
+
+ $("huB").textContent =
+  B.hu.map(v => v.toFixed(3)).join(", ");
+
+ $("huScore").textContent = scoreHu.toFixed(4);
+
+ $("lbpA").textContent =
+  useLbp ? "944 fitur dihitung" : "Tidak digunakan";
+
+ $("lbpB").textContent =
+  useLbp ? "944 fitur dihitung" : "Tidak digunakan";
+
+ $("lbpScore").textContent =
+  useLbp ? scoreLbp.toFixed(4) : "Tidak digunakan";
+
+ $("geoA").textContent =
   `Luas: ${A.geo.area} | Keliling: ${A.geo.perimeter} | Rasio: ${A.geo.ratio.toFixed(3)}`;
 
- $("geoB").textContent=
+ $("geoB").textContent =
   `Luas: ${B.geo.area} | Keliling: ${B.geo.perimeter} | Rasio: ${B.geo.ratio.toFixed(3)}`;
 
- $("geoScore").textContent=sg.toFixed(4);
+ $("geoScore").textContent = scoreGeo.toFixed(4);
 
- $("roiA").textContent=
-  `Area: ${A.roi.percent.toFixed(2)}% | Kulit: ${A.roi.skinPercent.toFixed(2)}% | ${A.roi.detected?"Terdeteksi":"Fallback"}`;
+ $("roiA").textContent =
+  `Area: ${A.roi.percent.toFixed(2)}% | Kulit: ${A.roi.skinPercent.toFixed(2)}% | ${A.roi.detected ? "Terdeteksi" : "Fallback"}`;
 
- $("roiB").textContent=
-  `Area: ${B.roi.percent.toFixed(2)}% | Kulit: ${B.roi.skinPercent.toFixed(2)}% | ${B.roi.detected?"Terdeteksi":"Fallback"}`;
+ $("roiB").textContent =
+  `Area: ${B.roi.percent.toFixed(2)}% | Kulit: ${B.roi.skinPercent.toFixed(2)}% | ${B.roi.detected ? "Terdeteksi" : "Fallback"}`;
 
- $("roiScore").textContent=sr.toFixed(4);
+ $("roiScore").textContent = scoreRoi.toFixed(4);
 }
 
 /* =========================
    JALANKAN VERIFIKASI
 ========================= */
 
-$("verify").addEventListener("click",()=>{
- if(!imageA||!imageB) {
+$("verify").addEventListener("click", () => {
+ if (!imageA || !imageB) {
   alert("Masukkan gambar A dan gambar B terlebih dahulu.");
   return;
  }
 
- $("verify").disabled=true;
- $("status").textContent="Sedang menghitung fitur gambar...";
+ $("verify").disabled = true;
+ $("status").textContent = "Sedang menghitung fitur gambar...";
+ $("result").style.display = "none";
 
- try {
-  const canvasA=buatCanvas(imageA,false);
-  const canvasB=buatCanvas(imageB,true);
+ // Beri kesempatan browser memperbarui tampilan.
+ setTimeout(() => {
+  try {
+   const canvasA = buatCanvas(imageA, false);
+   const canvasB = buatCanvas(imageB, true);
 
-  const A=ekstraksi(canvasA);
-  const B=ekstraksi(canvasB);
+   const A = ekstraksi(canvasA);
+   const B = ekstraksi(canvasB);
 
-  tampilkanHasil(A,B);
+   tampilkanHasil(A, B);
 
-  $("status").textContent="Verifikasi selesai. Semua fitur berhasil dihitung.";
+   $("status").textContent =
+    "Verifikasi selesai. Semua fitur berhasil dihitung.";
 
- } catch(error) {
-  console.error(error);
-  $("status").textContent="Gagal memproses gambar.";
-  alert("Terjadi kesalahan: "+error.message);
+  } catch (error) {
+   console.error(error);
 
- } finally {
-  $("verify").disabled=false;
- }
+   $("status").textContent =
+    "Gagal memproses gambar: " + error.message;
+
+   alert("Terjadi kesalahan saat memproses gambar: " + error.message);
+
+  } finally {
+   $("verify").disabled = false;
+  }
+ }, 50);
 });
 </script>
+
 </body>
 </html>
