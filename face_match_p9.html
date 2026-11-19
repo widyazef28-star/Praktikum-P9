@@ -307,6 +307,7 @@ function ekstrakFiturObjek(canvasId) {
             gray, gray, new cv.Size(5,5), 0
         );
 
+        
         // 1. HISTOGRAM RGB
         cv.split(rgb, channels);
 
@@ -316,22 +317,16 @@ function ekstrakFiturObjek(canvasId) {
         for (let c = 0; c < 3; c++) {
             let hist = new cv.Mat();
             let channel = channels.get(c);
-            let chVec = new cv.MatVector();
 
-            chVec.push_back(channel);
-
-            // Urutan parameter calcHist yang benar
-            
-                cv.calcHist(
-                    chVec,
-                    [0],
-                    mask,
-                    hist,
-                    histSize,
-                    ranges,
-                    false
-                );
-
+            cv.calcHist(
+                channel,
+                [0],
+                mask,
+                hist,
+                histSize,
+                ranges,
+                false
+            );
 
             cv.normalize(
                 hist,
@@ -346,7 +341,6 @@ function ekstrakFiturObjek(canvasId) {
             }
 
             channel.delete();
-            chVec.delete();
             hist.delete();
         }
 
