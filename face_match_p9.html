@@ -327,16 +327,16 @@ function ekstrakFiturObjek(canvasId) {
         let chVec = new cv.MatVector();
 
         chVec.push_back(channels.get(c));
-
-        cv.calcHist(
-            chVec,
-            [0],
-            mask,
-            hist,
-            histSize,
-            ranges,
-            false
-        );
+    
+           cv.calcHist(
+        chVec,
+        [0],
+        mask,
+        histSize,
+        ranges,
+        hist,
+        false
+    );
 
         cv.normalize(
             hist,
