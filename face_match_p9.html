@@ -445,6 +445,11 @@ function ekstrakFiturObjek(canvasId) {
             cv.THRESH_BINARY + cv.THRESH_OTSU
         );
 
+        console.log("CEK binary:", binary instanceof cv.Mat);
+        console.log("CEK contours:", contours instanceof cv.MatVector);
+        console.log("CEK hierarchy:", hierarchy instanceof cv.Mat);
+        console.log("CEK findContours:", typeof cv.findContours);
+
         cv.findContours(
             binary,
             contours,
