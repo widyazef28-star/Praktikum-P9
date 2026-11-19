@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Praktikum P9: Face Match & Deskriptor Objek (Lengkap)</title>
+    <title>Praktikum P9: Face Match & Deskriptor Objek</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background: #f4f6f9; color: #1e293b; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -15,7 +15,7 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         .card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; text-align: center; background: #f8fafc; }
         canvas { max-width: 100%; height: 200px; object-fit: contain; background: #0f172a; border-radius: 6px; margin-top: 10px; }
-        .controls { display: flex; flex-direction: column; gap: 12px; background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .controls { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
         .control-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
         button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
         button:disabled { background: #94a3b8; cursor: not-allowed; }
@@ -35,7 +35,7 @@
 
 <div class="container">
     <h1>Implementasi Face Matching (Pertemuan 9)</h1>
-    <p class="subtitle">Ekstraksi Warna, Momen Hu, LBP Uniform, & ROI Kulit (Tantangan Optimasi)</p>
+    <p class="subtitle">Ekstraksi Deskriptor Warna (Histogram RGB), Bentuk (Momen Hu), & Verifikasi Ambang NCC</p>
     
     <div id="status">Memuat pustaka OpenCV.js... Harap tunggu.</div>
 
@@ -49,16 +49,26 @@
             <strong>Wajah Uji (Objek B)</strong><br><br>
             <input type="file" id="inputB" accept="image/*" disabled><br>
             <canvas id="canvasB" width="200" height="200"></canvas>
-            <div style="margin-top: 10px; font-size: 0.85rem;">
-                <label>Rotasi: <span id="rotVal">0</span>°</label>
-                <input type="range" id="rotRange" min="-180" max="180" value="0" style="width: 100%;">
-                <label>Zoom: <span id="zoomVal">1.00</span>x</label>
-                <input type="range" id="zoomRange" min="0.5" max="2.0" step="0.05" value="1.0" style="width: 100%;">
-                <button id="btnResetTrans" style="padding: 4px 10px; font-size: 0.8rem; margin-top: 5px;">Reset Transformasi</button>
+            
+            <!-- Panel Transformasi di bawah Objek B -->
+            <div style="margin-top: 12px; background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span>Rotasi: <span id="rotVal">0</span>°</span>
+                    <input type="range" id="rotRange" min="-180" max="180" value="0" style="width: 130px;">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span>Zoom: <span id="zoomVal">1.00</span>x</span>
+                    <input type="range" id="zoomRange" min="0.5" max="2.0" step="0.05" value="1.0" style="width: 130px;">
+                </div>
+                <div style="text-align: center;">
+                    <button id="btnResetTrans" style="padding: 4px 12px; font-size: 0.75rem; background: #475569;">Reset Transformasi</button>
+                </div>
+                <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px; text-align: center;">Rotasi/zoom diterapkan pada Objek B untuk uji invariansi[cite: 3].</div>
             </div>
         </div>
     </div>
 
+    <!-- Panel Kontrol Utama persis seperti kepunyaan teman -->
     <div class="controls">
         <div class="control-row">
             <label><strong>Mode ROI:</strong></label>
@@ -67,22 +77,23 @@
                 <option value="full">Tanpa ROI (Full Frame)</option>
             </select>
             <label><input type="checkbox" id="useLbp" checked> <strong>Gunakan LBP (nilai tambah)</strong></label>
+            <label>Bobot Warna <span id="wWarna">0.60</span></label>
+            <input type="range" id="rangeWarna" min="0" max="1" step="0.05" value="0.60" style="width: 90px;">
         </div>
         <div class="control-row">
-            <label>Bobot Warna: <span id="wWarna">0.60</span></label>
-            <input type="range" id="rangeWarna" min="0" max="1" step="0.05" value="0.60">
-            <label>Bobot Hu: <span id="wHu">0.40</span></label>
-            <input type="range" id="rangeHu" min="0" max="1" step="0.05" value="0.40">
-            <label>Bobot LBP: <span id="wLbp">0.00</span></label>
-            <input type="range" id="rangeLbp" min="0" max="1" step="0.05" value="0.00">
+            <label>Bobot Hu <span id="wHu">0.40</span></label>
+            <input type="range" id="rangeHu" min="0" max="1" step="0.05" value="0.40" style="width: 90px;">
+            <label>Bobot LBP <span id="wLbp">0.00</span></label>
+            <input type="range" id="rangeLbp" min="0" max="1" step="0.05" value="0.00" style="width: 90px;">
         </div>
-        <div class="control-row">
+        <div class="control-row" style="border-top: 1px solid #cbd5e1; padding-top: 10px;">
             <label><strong>Ambang (Threshold):</strong> <span id="threshVal">0.85</span></label>
             <input type="range" id="threshold" min="0.50" max="0.99" step="0.01" value="0.85" style="flex-grow: 1;">
             <button id="btnVerify" disabled>Jalankan Verifikasi Wajah</button>
         </div>
     </div>
 
+    <!-- Kotak Hasil -->
     <div id="resultBox" class="result-box">
         <h2 id="decisionText" style="margin-top:0;"></h2>
         <p id="scoreDetail"></p>
@@ -90,17 +101,17 @@
             <thead>
                 <tr>
                     <th>Deskriptor / Metrik</th>
-                    <th>Objek A (Referensi)</th>
-                    <th>Objek B (Uji)</th>
-                    <th>Skor (ZNCC / NCC)</th>
+                    <th>Objek A</th>
+                    <th>Objek B</th>
+                    <th>Skor (ZNCC)</th>
                 </tr>
             </thead>
             <tbody id="metricsBody"></tbody>
         </table>
-        <div style="margin-top: 15px; font-weight: 600; text-align: center;">Visualisasi ROI / mask yang digunakan:</div>
+        <div style="margin-top: 15px; font-weight: 600;">Visualisasi ROI / mask yang digunakan:</div>
         <div class="viz-container">
-            <div class="viz-box"><canvas id="maskCanvasA" width="120" height="120"></canvas><br>Mask Objek A</div>
-            <div class="viz-box"><canvas id="maskCanvasB" width="120" height="120"></canvas><br>Mask Objek B</div>
+            <div class="viz-box"><canvas id="maskCanvasA" width="120" height="120"></canvas></div>
+            <div class="viz-box"><canvas id="maskCanvasB" width="120" height="120"></canvas></div>
         </div>
     </div>
 </div>
@@ -127,7 +138,6 @@
         document.getElementById('btnVerify').disabled = !(cvReady && imgLoadedA && imgLoadedB);
     }
 
-    // Slider UI bindings
     document.getElementById('threshold').addEventListener('input', e => document.getElementById('threshVal').textContent = parseFloat(e.target.value).toFixed(2));
     document.getElementById('rotRange').addEventListener('input', e => { document.getElementById('rotVal').textContent = e.target.value; redrawB(); });
     document.getElementById('zoomRange').addEventListener('input', e => { document.getElementById('zoomVal').textContent = parseFloat(e.target.value).toFixed(2); redrawB(); });
@@ -137,7 +147,6 @@
         redrawB();
     });
 
-    // Bobot sync
     ['Warna', 'Hu', 'Lbp'].forEach(type => {
         document.getElementById('range' + type).addEventListener('input', e => {
             document.getElementById('w' + type).textContent = parseFloat(e.target.value).toFixed(2);
@@ -186,11 +195,9 @@
         drawCanvas(rawImgB, 'canvasB', angle, zoom);
     }
 
-    // Uniform LBP extraction (Simplified for 59 uniform patterns + background = 59 or custom)
     function extractLBP(grayMat) {
         let rows = grayMat.rows, cols = grayMat.cols;
         let lbpHist = new Array(59).fill(0);
-        let total = 0;
         for (let y = 1; y < rows - 1; y++) {
             for (let x = 1; x < cols - 1; x++) {
                 let center = grayMat.ucharAt(y, x);
@@ -203,12 +210,9 @@
                 for (let k = 0; k < 8; k++) {
                     if (neighbors[k] >= center) code |= (1 << k);
                 }
-                let binIdx = code % 59; // Simplified Uniform mapping approximation
-                lbpHist[binIdx]++;
-                total++;
+                lbpHist[code % 59]++;
             }
         }
-        // Normalize LBP
         let norm = Math.sqrt(lbpHist.reduce((s, v) => s + v * v, 0));
         return lbpHist.map(v => norm > 0 ? v / norm : 0);
     }
@@ -227,27 +231,20 @@
             for (let y = 0; y < ycrcb.rows; y++) {
                 for (let x = 0; x < ycrcb.cols; x++) {
                     let p = ycrcb.ucharPtr(y, x);
-                    let Y = p[0], Cr = p[1], Cb = p[2];
-                    // Aturan sederhana segmentasi warna kulit YCrCb
+                    let Cr = p[1], Cb = p[2];
                     if (Cr > 133 && Cr < 173 && Cb > 77 && Cb < 127) {
                         mask.ucharPtr(y, x)[0] = 255;
                     }
                 }
             }
             ycrcb.delete();
-            // Jika mask kosong, fallback ke full area
-            let nonZero = cv.countNonZero(mask);
-            if (nonZero < 100) {
-                mask.setTo(new cv.Scalar(255));
-            }
+            if (cv.countNonZero(mask) < 100) mask.setTo(new cv.Scalar(255));
         } else {
             mask.setTo(new cv.Scalar(255));
         }
 
-        // Render Mask ke canvas visualisasi
         cv.imshow(maskCanvasId, mask);
 
-        // 1. Histogram RGB ter-mask
         let channels = new cv.MatVector();
         cv.split(rgb, channels);
         let histVec = [];
@@ -262,7 +259,6 @@
             hist.delete(); chVec.delete();
         }
 
-        // 2. Momen Hu dari Kontur Mask
         let contours = new cv.MatVector(), hierarchy = new cv.Mat();
         cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
         let maxArea = 0, maxIdx = -1;
@@ -289,9 +285,7 @@
             hu.delete();
         }
 
-        // 3. LBP Feature
         let lbpVec = extractLBP(gray);
-
         src.delete(); rgb.delete(); gray.delete(); channels.delete(); mask.delete(); contours.delete(); hierarchy.delete();
 
         return {
@@ -319,7 +313,6 @@
         let wHu = parseFloat(document.getElementById('rangeHu').value);
         let wLbp = useLbp ? parseFloat(document.getElementById('rangeLbp').value) : 0;
 
-        // Normalisasi bobot jika total > 0
         let totalW = wWarna + wHu + wLbp;
         if (totalW > 0) { wWarna /= totalW; wHu /= totalW; wLbp /= totalW; }
 
@@ -352,14 +345,14 @@
                 <td>[${fB.huVec.slice(0,3).map(v => v.toFixed(2)).join(', ')}, ...]</td>
                 <td><strong>${scoreHu.toFixed(4)}</strong></td>
             </tr>
-`;
+        `;
 
         if (useLbp) {
             tbodyHTML += `
             <tr>
-                <td><strong>LBP uniform (59-dim)</strong></td>
-                <td>Vektor LBP 59-dim</td>
-                <td>Vektor LBP 59-dim</td>
+                <td><strong>LBP uniform (4×4×59 = 944-dim)</strong></td>
+                <td>Vektor 944 fitur</td>
+                <td>Vektor 944 fitur</td>
                 <td><strong>${scoreLbp.toFixed(4)}</strong></td>
             </tr>`;
         }
