@@ -23,8 +23,8 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
 
-h1 { color: #0f172a; }
-.subtitle { color: #64748b; }
+h1 { color: #0f172a; margin-bottom: 5px; }
+.subtitle { color: #64748b; margin-top: 0; margin-bottom: 20px; }
 
 #status {
     padding: 12px;
@@ -32,6 +32,7 @@ h1 { color: #0f172a; }
     color: #92400e;
     border-radius: 6px;
     margin-bottom: 20px;
+    font-weight: 600;
 }
 
 #status.ready {
@@ -95,6 +96,10 @@ button:disabled {
     cursor: not-allowed;
 }
 
+button:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
 .result-box {
     padding: 20px;
     border-radius: 8px;
@@ -140,93 +145,66 @@ th { background: #e2e8f0; }
 
 <div class="container">
 
-<h1>Implementasi Face Matching (Pertemuan 9)</h1>
+    <h1>Implementasi Face Matching (Pertemuan 9)</h1>
+    <p class="subtitle">Ekstraksi Deskriptor Warna (Histogram RGB), Bentuk (Momen Hu), dan Verifikasi Ambang NCC</p>
 
-<p class="subtitle">
-Ekstraksi Deskriptor Warna (Histogram RGB),
-Bentuk (Momen Hu), dan Verifikasi Ambang NCC
-</p>
+    <div id="status">Memuat pustaka OpenCV.js... Harap tunggu.</div>
 
-<div id="status">Memuat OpenCV.js...</div>
+    <div class="grid">
+        <div class="card">
+            <strong>Wajah Referensi (Objek A)</strong>
+            <br><br>
+            <input type="file" id="inputA" accept="image/*" disabled>
+            <br>
+            <canvas id="canvasA" width="200" height="200"></canvas>
+        </div>
 
-<div class="grid">
-
-    <div class="card">
-        <strong>Wajah Referensi (Objek A)</strong>
-        <br><br>
-        <input type="file" id="inputA" accept="image/*" disabled>
-        <br>
-        <canvas id="canvasA" width="200" height="200"></canvas>
+        <div class="card">
+            <strong>Wajah Uji (Objek B)</strong>
+            <br><br>
+            <input type="file" id="inputB" accept="image/*" disabled>
+            <br>
+            <canvas id="canvasB" width="200" height="200"></canvas>
+        </div>
     </div>
 
-    <div class="card">
-        <strong>Wajah Uji (Objek B)</strong>
-        <br><br>
-        <input type="file" id="inputB" accept="image/*" disabled>
-        <br>
-        <canvas id="canvasB" width="200" height="200"></canvas>
+    <div class="controls">
+        <label>
+            <strong>Threshold:</strong> <span id="threshVal">0.85</span>
+        </label>
+        <input type="range" id="threshold" min="0.50" max="0.99" step="0.01" value="0.85">
+        <button id="btnVerify" disabled>Jalankan Verifikasi Wajah</button>
+    </div>
+
+    <div id="resultBox" class="result-box">
+        <h2 id="decisionText" style="margin-top:0;"></h2>
+        <p id="scoreDetail"></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Deskriptor / Metrik</th>
+                    <th>Objek A (Referensi)</th>
+                    <th>Objek B (Uji)</th>
+                    <th>Skor NCC</th>
+                </tr>
+            </thead>
+            <tbody id="metricsBody"></tbody>
+        </table>
     </div>
 
 </div>
 
-<div class="controls">
-
-    <label>
-        <strong>Threshold:</strong>
-        <span id="threshVal">0.85</span>
-    </label>
-
-    <input type="range"
-        id="threshold"
-        min="0.50"
-        max="0.99"
-        step="0.01"
-        value="0.85">
-
-    <button id="btnVerify" disabled>
-        Jalankan Verifikasi Wajah
-    </button>
-
-</div>
-
-<div id="resultBox" class="result-box">
-
-    <h2 id="decisionText"></h2>
-    <p id="scoreDetail"></p>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Deskriptor / Metrik</th>
-                <th>Objek A</th>
-                <th>Objek B</th>
-                <th>Skor NCC</th>
-            </tr>
-        </thead>
-
-        <tbody id="metricsBody"></tbody>
-    </table>
-
-</div>
-
-</div>
-
-<script async
-src="https://docs.opencv.org/4.8.0/opencv.js"
-onload="onOpenCvReady()">
-</script>
+<!-- Memuat OpenCV.js secara asinkron -->
+<script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();"></script>
 
 <script>
-
 let imgLoadedA = false;
 let imgLoadedB = false;
 let cvReady = false;
 
 const statusBox = document.getElementById("status");
 
-// MENYIAPKAN OPENCV
 function onOpenCvReady() {
-
     if (typeof cv === "undefined") {
         statusBox.textContent = "OpenCV.js gagal dimuat.";
         statusBox.className = "error";
@@ -234,52 +212,30 @@ function onOpenCvReady() {
     }
 
     cv.onRuntimeInitialized = function() {
-
         cvReady = true;
-
-        statusBox.textContent =
-            "OpenCV.js Siap! Silakan unggah kedua gambar.";
-
+        statusBox.textContent = "OpenCV.js Siap! Silakan unggah kedua gambar wajah.";
         statusBox.className = "ready";
-
         document.getElementById("inputA").disabled = false;
         document.getElementById("inputB").disabled = false;
-
         cekTombol();
     };
 }
 
-// CEK KESIAPAN TOMBOL
 function cekTombol() {
-
-    document.getElementById("btnVerify").disabled =
-        !(imgLoadedA && imgLoadedB && cvReady);
-
+    document.getElementById("btnVerify").disabled = !(imgLoadedA && imgLoadedB && cvReady);
 }
 
-// MENGATUR THRESHOLD
-document.getElementById("threshold")
-.addEventListener("input", function(e) {
-
-    document.getElementById("threshVal").textContent =
-        Number(e.target.value).toFixed(2);
-
+document.getElementById("threshold").addEventListener("input", function(e) {
+    document.getElementById("threshVal").textContent = Number(e.target.value).toFixed(2);
 });
 
-// MEMUAT GAMBAR
 function loadImage(inputId, canvasId, flag) {
-
-    document.getElementById(inputId)
-    .addEventListener("change", function(e) {
-
+    document.getElementById(inputId).addEventListener("change", function(e) {
         const file = e.target.files[0];
-
         if (!file) return;
 
         const img = new Image();
-
         img.onload = function() {
-
             const canvas = document.getElementById(canvasId);
             const ctx = canvas.getContext("2d");
 
@@ -295,7 +251,6 @@ function loadImage(inputId, canvasId, flag) {
             if (flag === "B") imgLoadedB = true;
 
             cekTombol();
-
         };
 
         img.onerror = function() {
@@ -303,54 +258,13 @@ function loadImage(inputId, canvasId, flag) {
         };
 
         img.src = URL.createObjectURL(file);
-
     });
-
 }
 
 loadImage("inputA", "canvasA", "A");
 loadImage("inputB", "canvasB", "B");
 
-// MENGHITUNG MOMEN HU SECARA MANUAL
-function hitungHu(m) {
-
-    const n20 = m.nu20;
-    const n02 = m.nu02;
-    const n11 = m.nu11;
-    const n30 = m.nu30;
-    const n03 = m.nu03;
-    const n12 = m.nu12;
-    const n21 = m.nu21;
-
-    const a = n30 - 3 * n12;
-    const b = 3 * n21 - n03;
-    const c = n30 + n12;
-    const d = n21 + n03;
-
-    return [
-
-        n20 + n02,
-
-        Math.pow(n20 - n02, 2) +
-        4 * Math.pow(n11, 2),
-
-        Math.pow(a, 2) + Math.pow(b, 2),
-
-        Math.pow(c, 2) + Math.pow(d, 2),
-
-        a * c * (c*c - 3*d*d) +
-        b * d * (3*c*c - d*d),
-
-        (n20 - n02) * (c*c - d*d) +
-        4 * n11 * c * d,
-
-        b * c * (c*c - 3*d*d) -
-        a * d * (3*c*c - d*d)
-
-    ];
-}
-
-    // MEMBUAT ROI WAJAH
+// Membuat ROI sederhana dari tengah canvas
 function buatROI(canvasId) {
     const canvasAsli = document.getElementById(canvasId);
     const roiCanvas = document.createElement("canvas");
@@ -358,57 +272,29 @@ function buatROI(canvasId) {
     roiCanvas.height = 200;
 
     const ctxROI = roiCanvas.getContext("2d");
-
-    const x = 40;
-    const y = 20;
-    const width = 120;
-    const height = 160;
-
-    ctxROI.drawImage(
-        canvasAsli,
-        x, y, width, height,
-        0, 0, 200, 200
-    );
+    ctxROI.drawImage(canvasAsli, 0, 0, 200, 200);
 
     return {
         canvas: roiCanvas,
-        info: { x, y, width, height }
+        info: { x: 0, y: 0, width: 200, height: 200 }
     };
 }
 
-// FUNGSI EKSTRAKSI FITUR GAMBAR
+// Ekstraksi Fitur Objek (Histogram RGB, Momen Hu bawaan OpenCV, Geometri)
 function ekstrakFiturObjek(canvasId) {
-
     const hasilROI = buatROI(canvasId);
-    const canvasROI = hasilROI.canvas;
-    let src = cv.imread(canvasROI);
+    let src = cv.imread(hasilROI.canvas);
     let gray = new cv.Mat();
     let binary = new cv.Mat();
-
     let histVec = [];
 
     try {
-
-        // MENGUBAH GAMBAR MENJADI GRAYSCALE
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-        cv.GaussianBlur(
-            gray,
-            gray,
-            new cv.Size(5, 5),
-            0
-        );
+        cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
 
         // 1. HISTOGRAM RGB
-        const canvas = canvasROI;
-        const ctx = canvas.getContext("2d");
-
-        const pixels = ctx.getImageData(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        ).data;
+        const ctx = hasilROI.canvas.getContext("2d");
+        const pixels = ctx.getImageData(0, 0, 200, 200).data;
 
         const histograms = [
             new Array(64).fill(0),
@@ -417,7 +303,6 @@ function ekstrakFiturObjek(canvasId) {
         ];
 
         for (let i = 0; i < pixels.length; i += 4) {
-
             const r = pixels[i];
             const g = pixels[i + 1];
             const b = pixels[i + 2];
@@ -425,339 +310,168 @@ function ekstrakFiturObjek(canvasId) {
             histograms[0][Math.min(63, Math.floor(r / 4))]++;
             histograms[1][Math.min(63, Math.floor(g / 4))]++;
             histograms[2][Math.min(63, Math.floor(b / 4))]++;
-
         }
 
-        // NORMALISASI HISTOGRAM
         for (let c = 0; c < 3; c++) {
-
-            let norm = Math.sqrt(
-                histograms[c].reduce(
-                    (sum, value) => sum + value * value,
-                    0
-                )
-            );
-
+            let norm = Math.sqrt(histograms[c].reduce((sum, val) => sum + val * val, 0));
             for (let i = 0; i < 64; i++) {
-
-                histVec.push(
-                    norm > 0
-                    ? histograms[c][i] / norm
-                    : 0
-                );
-
+                histVec.push(norm > 0 ? histograms[c][i] / norm : 0);
             }
-
         }
 
-        // 2. MOMEN HU DAN GEOMETRI
+        // 2. MOMEN HU & GEOMETRI KONTUR
+        cv.threshold(gray, binary, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
 
-        cv.threshold(
-            gray,
-            binary,
-            0,
-            255,
-            cv.THRESH_BINARY + cv.THRESH_OTSU
-        );
-
-        // Memastikan area objek adalah area putih yang lebih kecil
         let whiteCount = 0;
-
         for (let i = 0; i < binary.data.length; i++) {
-            if (binary.data[i] > 0) {
-                whiteCount++;
-            }
+            if (binary.data[i] > 0) whiteCount++;
         }
-
-        if (whiteCount > binary.rows * binary.cols / 2) {
+        if (whiteCount > (binary.rows * binary.cols) / 2) {
             cv.bitwise_not(binary, binary);
         }
 
-        // Menghitung momen dari citra biner
-        const momen = cv.moments(binary, true);
-        const hu = hitungHu(momen);
+        const momen = cv.moments(binary, false);
+        let huMat = new cv.Mat();
+        cv.HuMoments(momen, huMat);
 
-        let huVec = hu.map(function(val) {
+        let huVec = [];
+        for (let i = 0; i < 7; i++) {
+            let val = huMat.doubleAt(i, 0);
+            let logVal = (val !== 0 && !isNaN(val)) ? -Math.sign(val) * Math.log10(Math.abs(val)) : 0;
+            huVec.push(logVal);
+        }
+        huMat.delete();
 
-            return val !== 0 && Number.isFinite(val)
-                ? -Math.sign(val) * Math.log10(Math.abs(val))
-                : 0;
-
-        });
-
-        // Menghitung geometri berdasarkan piksel objek
-        let minX = binary.cols;
-        let minY = binary.rows;
-        let maxX = -1;
-        let maxY = -1;
-
-        let luas = 0;
-        let keliling = 0;
-
+        // Hitung Geometri Sederhana
+        let luas = 0, keliling = 0;
+        let minX = binary.cols, minY = binary.rows, maxX = -1, maxY = -1;
         const data = binary.data;
         const rows = binary.rows;
         const cols = binary.cols;
 
         for (let y = 0; y < rows; y++) {
-
             for (let x = 0; x < cols; x++) {
-
-                const index = y * cols + x;
-
-                if (data[index] > 0) {
-
+                const idx = y * cols + x;
+                if (data[idx] > 0) {
                     luas++;
-
                     minX = Math.min(minX, x);
                     minY = Math.min(minY, y);
                     maxX = Math.max(maxX, x);
                     maxY = Math.max(maxY, y);
 
-                    // Menghitung sisi batas objek
-                    if (y === 0 || data[(y-1)*cols+x] === 0) {
-                        keliling++;
-                    }
-
-                    if (y === rows-1 || data[(y+1)*cols+x] === 0) {
-                        keliling++;
-                    }
-
-                    if (x === 0 || data[y*cols+x-1] === 0) {
-                        keliling++;
-                    }
-
-                    if (x === cols-1 || data[y*cols+x+1] === 0) {
-                        keliling++;
-                    }
-
+                    if (y === 0 || data[(y-1)*cols+x] === 0) keliling++;
+                    if (y === rows-1 || data[(y+1)*cols+x] === 0) keliling++;
+                    if (x === 0 || data[y*cols+x-1] === 0) keliling++;
+                    if (x === cols-1 || data[y*cols+x+1] === 0) keliling++;
                 }
-
             }
-
         }
 
         let rasioAspek = 0;
-
         if (maxX >= minX && maxY >= minY) {
-
-            const width = maxX - minX + 1;
-            const height = maxY - minY + 1;
-
-            rasioAspek = height > 0
-                ? width / height
-                : 0;
-
+            let w = maxX - minX + 1;
+            let h = maxY - minY + 1;
+            rasioAspek = h > 0 ? w / h : 0;
         }
 
         const bentukInfo = {
-
             luas: luas,
-
             keliling: keliling,
-
             rasioAspek: rasioAspek.toFixed(2)
-
         };
 
-               return {
-            histVec,
-            huVec,
-            bentukInfo,
-            roiInfo: hasilROI.info
-        };
+        return { histVec, huVec, bentukInfo };
 
     } finally {
-
         src.delete();
         gray.delete();
         binary.delete();
-
     }
-
 }
 
-// NORMALIZED CROSS-CORRELATION
+// Normalized Cross-Correlation (NCC)
 function ncc(vecA, vecB) {
-
-    if (
-        vecA.length !== vecB.length ||
-        vecA.length === 0
-    ) {
-        return 0;
-    }
-
-    let dot = 0;
-    let normA = 0;
-    let normB = 0;
-
+    if (vecA.length !== vecB.length || vecA.length === 0) return 0;
+    let dot = 0, normA = 0, normB = 0;
     for (let i = 0; i < vecA.length; i++) {
-
         dot += vecA[i] * vecB[i];
-
         normA += vecA[i] * vecA[i];
-
         normB += vecB[i] * vecB[i];
-
     }
-
     if (normA === 0 || normB === 0) return 0;
-
     return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-
 }
 
-// VERIFIKASI WAJAH
+// Verifikasi Wajah & Feature Fusion
 function verifikasiWajah(fiturA, fiturB, ambang) {
-
-    const skorWarna = ncc(
-        fiturA.histVec,
-        fiturB.histVec
-    );
-
-    const skorBentuk = ncc(
-        fiturA.huVec,
-        fiturB.huVec
-    );
-
-    const skorGabungan =
-        (0.6 * skorWarna) +
-        (0.4 * skorBentuk);
+    const skorWarna = ncc(fiturA.histVec, fiturB.histVec);
+    const skorBentuk = ncc(fiturA.huVec, fiturB.huVec);
+    const skorGabungan = (0.6 * skorWarna) + (0.4 * skorBentuk);
 
     return {
-
         skorWarna,
         skorBentuk,
         skorGabungan,
-
-        keputusan:
-            skorGabungan >= ambang
-            ? "COCOK"
-            : "TIDAK COCOK"
-
+        keputusan: skorGabungan >= ambang ? "COCOK" : "TIDAK COCOK"
     };
-
 }
 
-// TOMBOL VERIFIKASI
-document.getElementById("btnVerify")
-.addEventListener("click", function() {
-
+// Tombol Eksekusi
+document.getElementById("btnVerify").addEventListener("click", function() {
     const box = document.getElementById("resultBox");
-
     box.style.display = "block";
 
     try {
-
         if (!cvReady || !imgLoadedA || !imgLoadedB) {
             throw new Error("OpenCV atau gambar belum siap.");
         }
 
-        statusBox.textContent =
-            "Sedang menghitung fitur gambar...";
-
+        statusBox.textContent = "Sedang menghitung fitur gambar...";
         statusBox.className = "";
 
-        const ambang = Number(
-            document.getElementById("threshold").value
-        );
+        const ambang = Number(document.getElementById("threshold").value);
 
-        // EKSTRAKSI FITUR
         const fiturA = ekstrakFiturObjek("canvasA");
         const fiturB = ekstrakFiturObjek("canvasB");
+        const hasil = verifikasiWajah(fiturA, fiturB, ambang);
 
-        // VERIFIKASI
-        const hasil = verifikasiWajah(
-            fiturA,
-            fiturB,
-            ambang
-        );
-
-        box.className =
-            "result-box " +
-            (
-                hasil.keputusan === "COCOK"
-                ? "match"
-                : "no-match"
-            );
-
-        document.getElementById("decisionText").textContent =
-            "Keputusan Verifikasi: " + hasil.keputusan;
-
-        document.getElementById("scoreDetail").textContent =
-            "Skor Kemiripan Gabungan: " +
-            hasil.skorGabungan.toFixed(4) +
-            " | Threshold: " +
-            ambang.toFixed(2);
+        box.className = "result-box " + (hasil.keputusan === "COCOK" ? "match" : "no-match");
+        document.getElementById("decisionText").textContent = "Keputusan Verifikasi: " + hasil.keputusan;
+        document.getElementById("scoreDetail").textContent = "Skor Kemiripan Gabungan: " + hasil.skorGabungan.toFixed(4) + " | Threshold: " + ambang.toFixed(2);
 
         document.getElementById("metricsBody").innerHTML = `
-
             <tr>
-                <td>Histogram RGB</td>
-                <td>192 fitur</td>
-                <td>192 fitur</td>
-                <td>${hasil.skorWarna.toFixed(4)}</td>
+                <td>Histogram RGB (192-dim)</td>
+                <td>Vektor 192 fitur</td>
+                <td>Vektor 192 fitur</td>
+                <td><strong>${hasil.skorWarna.toFixed(4)}</strong></td>
             </tr>
-
             <tr>
-                <td>Momen Hu</td>
-
-                <td>
-                    ${fiturA.huVec.slice(0,3)
-                    .map(v => v.toFixed(3)).join(", ")}
-                </td>
-
-                <td>
-                    ${fiturB.huVec.slice(0,3)
-                    .map(v => v.toFixed(3)).join(", ")}
-                </td>
-
-                <td>${hasil.skorBentuk.toFixed(4)}</td>
+                <td>Momen Hu (7 Nilai Log)</td>
+                <td>[${fiturA.huVec.slice(0,3).map(v => v.toFixed(2)).join(", ")}, ...]</td>
+                <td>[${fiturB.huVec.slice(0,3).map(v => v.toFixed(2)).join(", ")}, ...]</td>
+                <td><strong>${hasil.skorBentuk.toFixed(4)}</strong></td>
             </tr>
-
             <tr>
-                <td>Geometri Kontur</td>
-
-                <td>
-                    Luas: ${fiturA.bentukInfo.luas},
-                    Keliling: ${fiturA.bentukInfo.keliling},
-                    Rasio: ${fiturA.bentukInfo.rasioAspek}
-                </td>
-
-                <td>
-                    Luas: ${fiturB.bentukInfo.luas},
-                    Keliling: ${fiturB.bentukInfo.keliling},
-                    Rasio: ${fiturB.bentukInfo.rasioAspek}
-                </td>
-
+                <td>Geometri Kontur Utama</td>
+                <td>Luas: ${fiturA.bentukInfo.luas}, Rasio: ${fiturA.bentukInfo.rasioAspek}</td>
+                <td>Luas: ${fiturB.bentukInfo.luas}, Rasio: ${fiturB.bentukInfo.rasioAspek}</td>
                 <td>-</td>
             </tr>
-
         `;
 
         statusBox.textContent = "Pengujian selesai.";
         statusBox.className = "ready";
 
     } catch (error) {
-
         console.error(error);
-
         box.className = "result-box no-match";
-
-        document.getElementById("decisionText").textContent =
-            "Terjadi kesalahan saat verifikasi";
-
-        document.getElementById("scoreDetail").textContent =
-            error.message;
-
-        statusBox.textContent =
-            "Error: " + error.message;
-
+        document.getElementById("decisionText").textContent = "Terjadi kesalahan saat verifikasi";
+        document.getElementById("scoreDetail").textContent = error.message;
+        statusBox.textContent = "Error: " + error.message;
         statusBox.className = "error";
-
     }
-
 });
-
 </script>
 
 </body>
