@@ -6,323 +6,205 @@
 <title>Sistem Verifikasi Wajah</title>
 
 <style>
-* {
-    box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+ font-family:Arial,sans-serif;
+ background:#f4f6fa;
+ color:#263445;
+ margin:0;
+ padding:25px;
 }
-
-body {
-    font-family: Arial, sans-serif;
-    background: #f4f6fa;
-    color: #263445;
-    margin: 0;
-    padding: 25px;
+.container{max-width:1000px;margin:auto}
+h2{font-size:22px}
+.panels{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:15px;
 }
-
-.container {
-    max-width: 1000px;
-    margin: auto;
+.panel,.controls{
+ background:white;
+ border:1px solid #ddd;
+ border-radius:8px;
+ padding:16px;
+ margin-bottom:14px;
 }
-
-h2 {
-    font-size: 22px;
+.preview{
+ height:200px;
+ background:#f8fafc;
+ border:1px dashed #bbb;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ overflow:hidden;
 }
-
-.panels {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
+.preview img{
+ max-width:100%;
+ max-height:100%;
+ object-fit:contain;
 }
-
-.panel, .controls {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 14px;
+input[type=file]{width:100%;margin-top:10px}
+.transform{margin-top:12px}
+.transform label{display:block;margin-bottom:8px}
+input[type=range]{accent-color:#087bea}
+button{
+ background:#2463d8;
+ color:white;
+ border:0;
+ padding:10px 16px;
+ border-radius:5px;
+ cursor:pointer;
 }
-
-.panel h3 {
-    font-size: 16px;
+button:disabled{opacity:.5;cursor:not-allowed}
+.reset{background:#64748b}
+.controls{background:#eef3f9}
+.control-row{
+ display:flex;
+ flex-wrap:wrap;
+ align-items:center;
+ gap:15px;
+ margin-bottom:12px;
 }
-
-.preview {
-    height: 200px;
-    background: #f8fafc;
-    border: 1px dashed #bbb;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
+select{
+ padding:7px;
+ border:1px solid #ccc;
+ border-radius:5px;
 }
-
-.preview img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+.result{
+ display:none;
+ margin-top:14px;
+ background:#effbf3;
+ border:2px solid #36c982;
+ border-radius:8px;
+ padding:16px;
 }
-
-input[type="file"] {
-    width: 100%;
-    margin-top: 10px;
+.result h3{margin-top:0}
+table{
+ width:100%;
+ border-collapse:collapse;
+ background:white;
+ font-size:13px;
 }
-
-.transform {
-    margin-top: 12px;
+th,td{
+ border:1px solid #d5dde7;
+ padding:9px;
+ text-align:left;
 }
-
-.transform label {
-    display: block;
-    margin-bottom: 8px;
-}
-
-input[type="range"] {
-    accent-color: #087bea;
-}
-
-button {
-    background: #2463d8;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #174fb8;
-}
-
-.reset {
-    background: #64748b;
-}
-
-.controls {
-    background: #eef3f9;
-}
-
-.control-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 12px;
-}
-
-select {
-    padding: 7px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-
-.result {
-    display: none;
-    margin-top: 14px;
-    background: #effbf3;
-    border: 2px solid #36c982;
-    border-radius: 8px;
-    padding: 16px;
-}
-
-.result h3 {
-    margin-top: 0;
-    font-size: 18px;
-}
-
-.score {
-    margin-bottom: 15px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    font-size: 13px;
-}
-
-th, td {
-    border: 1px solid #d5dde7;
-    padding: 9px;
-    text-align: left;
-}
-
-th {
-    background: #e3eaf3;
-}
-
-.note {
-    font-size: 12px;
-    color: #64748b;
-    margin-top: 12px;
-}
-
-@media(max-width:700px) {
-    .panels {
-        grid-template-columns: 1fr;
-    }
-
-    .control-row {
-        align-items: flex-start;
-    }
-
-    table {
-        font-size: 11px;
-    }
+th{background:#e3eaf3}
+.note{font-size:12px;color:#64748b}
+.status{font-size:12px;margin:10px 0}
+@media(max-width:700px){
+ .panels{grid-template-columns:1fr}
+ table{font-size:11px}
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
 <h2>Sistem Verifikasi Wajah</h2>
-
-<!-- OBJEK A DAN B -->
+<p class="status" id="cvStatus">Memuat OpenCV.js...</p>
 
 <div class="panels">
 
 <div class="panel">
 <h3>Objek A</h3>
-
-<div class="preview" id="previewA">
-Belum ada gambar
-</div>
-
+<div class="preview" id="previewA">Belum ada gambar</div>
 <input type="file" id="fileA" accept="image/*">
-
 </div>
 
 <div class="panel">
 <h3>Objek B</h3>
-
-<div class="preview" id="previewB">
-Belum ada gambar
-</div>
-
+<div class="preview" id="previewB">Belum ada gambar</div>
 <input type="file" id="fileB" accept="image/*">
 
 <div class="transform">
-
 <label>
 Rotasi: <span id="rotVal">0</span>°
-<input type="range" id="rotation"
-min="-180" max="180" value="0">
+<input type="range" id="rotation" min="-180" max="180" value="0">
 </label>
 
 <label>
 Zoom: <span id="zoomVal">1.00</span>x
-<input type="range" id="zoom"
-min="0.5" max="2" step="0.01" value="1">
+<input type="range" id="zoom" min="0.5" max="2" step="0.01" value="1">
 </label>
 
-<button class="reset" onclick="resetTransform()">
-Reset Transformasi
-</button>
-
+<button class="reset" onclick="resetTransform()">Reset Transformasi</button>
+</div>
+<p class="note">Rotasi/zoom diterapkan pada Objek B untuk uji invariansi.</p>
 </div>
 
-<p class="note">
-Rotasi/zoom diterapkan pada Objek B untuk uji invariansi.
-</p>
-
 </div>
-</div>
-
-<!-- PENGATURAN -->
 
 <div class="controls">
 
 <div class="control-row">
-
 <label><b>Mode ROI:</b></label>
-
-<select id="roi">
-<option>ROI Kulit (YCrCb + Kontur) – nilai tambah</option>
-<option>Seluruh Wajah</option>
-<option>Area Tengah Wajah</option>
+<select id="roiMode">
+<option value="skin">ROI Kulit (YCrCb + Kontur)</option>
+<option value="full">Seluruh Gambar</option>
 </select>
 
 <label>
-<input type="checkbox" id="lbp" checked>
-Gunakan LBP (nilai tambah)
+<input type="checkbox" id="lbpEnabled" checked>
+Gunakan LBP
 </label>
 
 <label>
 Bobot Warna <span id="warnaVal">0.60</span>
-<input type="range" id="warna"
-min="0" max="1" step="0.05" value="0.60">
+<input type="range" id="warna" min="0" max="1" step="0.05" value="0.60">
 </label>
-
 </div>
 
 <div class="control-row">
-
 <label>
 Bobot Hu <span id="huVal">0.40</span>
-<input type="range" id="hu"
-min="0" max="1" step="0.05" value="0.40">
+<input type="range" id="hu" min="0" max="1" step="0.05" value="0.40">
 </label>
 
 <label>
 Bobot LBP <span id="lbpVal">0.00</span>
-<input type="range" id="bobotLbp"
-min="0" max="1" step="0.05" value="0">
+<input type="range" id="bobotLbp" min="0" max="1" step="0.05" value="0">
 </label>
-
 </div>
-
-</div>
-
-<!-- THRESHOLD -->
-
-<div class="controls">
 
 <div class="control-row">
-
 <label>
-Ambang (Threshold):
-<span id="thresholdVal">0.85</span>
-
-<input type="range" id="threshold"
-min="0" max="1" step="0.01" value="0.85">
+Ambang (Threshold): <span id="thresholdVal">0.85</span>
+<input type="range" id="threshold" min="0" max="1" step="0.01" value="0.85">
 </label>
 
-<button onclick="verifikasi()">
+<button id="verify" onclick="verifikasi()" disabled>
 Jalankan Verifikasi Wajah
 </button>
-
 </div>
 
 </div>
-
-<!-- HASIL VERIFIKASI SEDERHANA -->
 
 <div class="result" id="result">
 
 <h3>
 Keputusan Verifikasi:
-<span id="decision">COCOK</span>
+<span id="decision">-</span>
 </h3>
 
-<div class="score">
+<p>
 <b>Skor Gabungan:</b>
-<span id="score">0.0000</span>
-(Ambang: <span id="usedThreshold">0.85</span>)
-</div>
+<span id="score">-</span>
+(Ambang: <span id="usedThreshold">-</span>)
+</p>
 
 <table>
-
 <thead>
 <tr>
 <th>Deskriptor / Metrik</th>
 <th>Objek A</th>
 <th>Objek B</th>
-<th>Skor (ZNCC)</th>
+<th>Skor (NCC)</th>
 </tr>
 </thead>
 
 <tbody>
-
 <tr>
 <td>Histogram Warna (RGB 192-dim)</td>
 <td>Vektor 192 fitur</td>
@@ -332,22 +214,22 @@ Keputusan Verifikasi:
 
 <tr>
 <td>Momen Hu (7 nilai, log)</td>
-<td>7 nilai fitur</td>
-<td>7 nilai fitur</td>
+<td id="huA">-</td>
+<td id="huB">-</td>
 <td id="huScore">-</td>
 </tr>
 
 <tr>
 <td>LBP uniform (4×4×59 = 944-dim)</td>
-<td>Vektor 944 fitur</td>
-<td>Vektor 944 fitur</td>
+<td id="lbpA">-</td>
+<td id="lbpB">-</td>
 <td id="lbpScore">-</td>
 </tr>
 
 <tr>
 <td>Geometri Kontur Utama</td>
-<td>Belum dihitung</td>
-<td>Belum dihitung</td>
+<td id="geoA">-</td>
+<td id="geoB">-</td>
 <td>-</td>
 </tr>
 
@@ -357,204 +239,602 @@ Keputusan Verifikasi:
 <td id="roiB">-</td>
 <td>-</td>
 </tr>
-
 </tbody>
 </table>
 
 <p class="note">
-Visualisasi ROI / mask yang digunakan.
+Nilai fitur dihitung dari citra yang diproses.
+ROI kulit menggunakan segmentasi warna YCrCb.
+Jika area kulit tidak terdeteksi, sistem menggunakan seluruh gambar.
 </p>
 
 </div>
-
 </div>
 
 <script>
+var Module = {
+ onRuntimeInitialized() {
+  window.cvReady = true;
+  document.getElementById("cvStatus").textContent =
+   "OpenCV.js siap digunakan.";
+  document.getElementById("verify").disabled = false;
+ }
+};
+</script>
 
-// MENYIMPAN GAMBAR
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+
+<script>
+
+// =================================
+// 1. UPLOAD GAMBAR
+// =================================
 
 let gambarA = null;
 let gambarB = null;
 
-// UPLOAD GAMBAR
+function upload(id, preview, callback) {
+ document.getElementById(id).addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
 
-function upload(input, preview, callback) {
+  const img = new Image();
 
-    document.getElementById(input)
-    .addEventListener("change", function(e) {
+  img.onload = () => {
+   const box = document.getElementById(preview);
+   box.innerHTML = "";
+   box.appendChild(img);
+   callback(img);
+  };
 
-        const file = e.target.files[0];
-
-        if (!file) return;
-
-        const img = new Image();
-
-        img.onload = function() {
-
-            const box = document.getElementById(preview);
-
-            box.innerHTML = "";
-            box.appendChild(img);
-
-            callback(img);
-        };
-
-        img.src = URL.createObjectURL(file);
-
-    });
+  img.src = URL.createObjectURL(file);
+ });
 }
 
-upload("fileA", "previewA", function(img) {
-    gambarA = img;
+upload("fileA","previewA",img=>gambarA=img);
+upload("fileB","previewB",img=>gambarB=img);
+
+// =================================
+// 2. ROTASI DAN ZOOM
+// =================================
+
+function transformasi(){
+ const rot = Number(document.getElementById("rotation").value);
+ const zoom = Number(document.getElementById("zoom").value);
+
+ document.getElementById("rotVal").textContent = rot;
+ document.getElementById("zoomVal").textContent = zoom.toFixed(2);
+
+ if(gambarB){
+  gambarB.style.transform =
+   `rotate(${rot}deg) scale(${zoom})`;
+ }
+}
+
+document.getElementById("rotation").oninput = transformasi;
+document.getElementById("zoom").oninput = transformasi;
+
+function resetTransform(){
+ document.getElementById("rotation").value=0;
+ document.getElementById("zoom").value=1;
+ transformasi();
+}
+
+// =================================
+// 3. UPDATE SLIDER
+// =================================
+
+[
+ ["warna","warnaVal"],
+ ["hu","huVal"],
+ ["bobotLbp","lbpVal"],
+ ["threshold","thresholdVal"]
+].forEach(([id,out])=>{
+ document.getElementById(id).oninput=e=>{
+  document.getElementById(out).textContent =
+   Number(e.target.value).toFixed(2);
+ };
 });
 
-upload("fileB", "previewB", function(img) {
-    gambarB = img;
-    transformasi();
-});
+// =================================
+// 4. CANVAS GAMBAR
+// =================================
 
-// ROTASI DAN ZOOM
+function buatCanvas(img, isB=false){
 
-function transformasi() {
+ const size=160;
+ const canvas=document.createElement("canvas");
+ canvas.width=size;
+ canvas.height=size;
 
-    if (!gambarB) return;
+ const ctx=canvas.getContext("2d");
 
-    const rot = document.getElementById("rotation").value;
-    const zoom = document.getElementById("zoom").value;
+ ctx.fillStyle="#ffffff";
+ ctx.fillRect(0,0,size,size);
 
-    gambarB.style.transform =
-    `rotate(${rot}deg) scale(${zoom})`;
+ ctx.save();
+ ctx.translate(size/2,size/2);
 
-    document.getElementById("rotVal").innerText = rot;
+ if(isB){
+  ctx.rotate(
+   Number(document.getElementById("rotation").value)
+   *Math.PI/180
+  );
 
-    document.getElementById("zoomVal").innerText =
-    Number(zoom).toFixed(2);
+  const zoom=Number(document.getElementById("zoom").value);
+  ctx.scale(zoom,zoom);
+ }
+
+ ctx.drawImage(img,-size/2,-size/2,size,size);
+ ctx.restore();
+
+ return canvas;
 }
 
-document.getElementById("rotation")
-.addEventListener("input", transformasi);
+// =================================
+// 5. ROI KULIT YCrCb
+// =================================
 
-document.getElementById("zoom")
-.addEventListener("input", transformasi);
+function ambilROI(src){
 
-function resetTransform() {
+ let x=0,y=0,w=src.cols,h=src.rows;
+ let mode=document.getElementById("roiMode").value;
 
-    document.getElementById("rotation").value = 0;
-    document.getElementById("zoom").value = 1;
+ if(mode==="skin"){
 
-    transformasi();
+  let ycrcb=new cv.Mat();
+  let mask=new cv.Mat();
+  let lower=new cv.Mat(
+   src.rows,src.cols,cv.CV_8UC3,
+   new cv.Scalar(0,133,77,0)
+  );
+  let upper=new cv.Mat(
+   src.rows,src.cols,cv.CV_8UC3,
+   new cv.Scalar(255,173,127,0)
+  );
+
+  cv.cvtColor(src,ycrcb,cv.COLOR_RGBA2YCrCb);
+  cv.inRange(ycrcb,lower,upper,mask);
+
+  let kernel=cv.Mat.ones(5,5,cv.CV_8U);
+  cv.morphologyEx(mask,mask,cv.MORPH_CLOSE,kernel);
+
+  let contours=new cv.MatVector();
+  let hierarchy=new cv.Mat();
+
+  cv.findContours(
+   mask,contours,hierarchy,
+   cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE
+  );
+
+  let maxArea=0;
+  let best=null;
+
+  for(let i=0;i<contours.size();i++){
+   let c=contours.get(i);
+   let area=cv.contourArea(c);
+
+   if(area>maxArea){
+    maxArea=area;
+    best=cv.boundingRect(c);
+   }
+  }
+
+  if(best && maxArea>src.rows*src.cols*0.01){
+   x=best.x;
+   y=best.y;
+   w=best.width;
+   h=best.height;
+  }
+
+  ycrcb.delete();
+  mask.delete();
+  lower.delete();
+  upper.delete();
+  kernel.delete();
+  contours.delete();
+  hierarchy.delete();
+ }
+
+ const rect=new cv.Rect(x,y,w,h);
+ const roi=src.roi(rect).clone();
+
+ return {
+  mat:roi,
+  info:`X:${x}, Y:${y}, ${w} × ${h}`
+ };
 }
 
-// UPDATE NILAI SLIDER
+// =================================
+// 6. HISTOGRAM RGB 192 FITUR
+// =================================
 
-function updateSlider(id, output) {
+function histogramRGB(imageData){
 
-    document.getElementById(id)
-    .addEventListener("input", function() {
+ const hist=new Array(192).fill(0);
+ const data=imageData.data;
 
-        document.getElementById(output).innerText =
-        Number(this.value).toFixed(2);
+ for(let i=0;i<data.length;i+=4){
 
-    });
+  let r=Math.min(63,Math.floor(data[i]/4));
+  let g=Math.min(63,Math.floor(data[i+1]/4));
+  let b=Math.min(63,Math.floor(data[i+2]/4));
+
+  hist[r]++;
+  hist[64+g]++;
+  hist[128+b]++;
+ }
+
+ for(let i=0;i<192;i++){
+  hist[i]/=(imageData.width*imageData.height);
+ }
+
+ return hist;
 }
 
-updateSlider("warna", "warnaVal");
-updateSlider("hu", "huVal");
-updateSlider("bobotLbp", "lbpVal");
-updateSlider("threshold", "thresholdVal");
+// =================================
+// 7. MOMEN HU 7 NILAI LOG
+// =================================
 
-// PERBANDINGAN KEMIRIPAN GAMBAR DEMO
+function hitungHu(gray){
 
-function similarity(img1, img2) {
+ let binary=new cv.Mat();
 
-    const canvas1 = document.createElement("canvas");
-    const canvas2 = document.createElement("canvas");
+ cv.threshold(
+  gray,binary,0,255,
+  cv.THRESH_BINARY+cv.THRESH_OTSU
+ );
 
-    const size = 64;
+ let moments=cv.moments(binary,true);
+ let huMat=new cv.Mat();
 
-    canvas1.width = canvas2.width = size;
-    canvas1.height = canvas2.height = size;
+ cv.HuMoments(moments,huMat);
 
-    const ctx1 = canvas1.getContext("2d");
-    const ctx2 = canvas2.getContext("2d");
+ let result=[];
 
-    ctx1.drawImage(img1, 0, 0, size, size);
-    ctx2.drawImage(img2, 0, 0, size, size);
+ for(let i=0;i<7;i++){
 
-    const data1 = ctx1.getImageData(
-        0, 0, size, size
-    ).data;
+  let value=huMat.data64F[i];
 
-    const data2 = ctx2.getImageData(
-        0, 0, size, size
-    ).data;
+  if(!Number.isFinite(value) || value===0){
+   result.push(0);
+  }else{
+   result.push(
+    -Math.sign(value)*Math.log10(Math.abs(value))
+   );
+  }
+ }
 
-    let total = 0;
+ binary.delete();
+ huMat.delete();
 
-    for (let i = 0; i < data1.length; i += 4) {
+ return result;
+}
 
-        total += (
-            Math.abs(data1[i] - data2[i]) +
-            Math.abs(data1[i+1] - data2[i+1]) +
-            Math.abs(data1[i+2] - data2[i+2])
-        ) / (3 * 255);
+// =================================
+// 8. LBP UNIFORM 944 FITUR
+// =================================
 
+const uniformMap=(()=>{
+
+ let map=new Array(256);
+ let index=0;
+
+ for(let p=0;p<256;p++){
+
+  let transitions=0;
+
+  for(let i=0;i<8;i++){
+
+   let a=(p>>i)&1;
+   let b=(p>>((i+1)%8))&1;
+
+   if(a!==b) transitions++;
+  }
+
+  if(transitions<=2){
+   map[p]=index++;
+  }else{
+   map[p]=58;
+  }
+ }
+
+ return map;
+})();
+
+function hitungLBP(gray){
+
+ const width=gray.cols;
+ const height=gray.rows;
+ const data=gray.data;
+
+ const result=new Array(944).fill(0);
+
+ for(let y=1;y<height-1;y++){
+  for(let x=1;x<width-1;x++){
+
+   let center=data[y*width+x];
+   let code=0;
+
+   const neighbors=[
+    [-1,-1],[0,-1],[1,-1],
+    [1,0],[1,1],[0,1],
+    [-1,1],[-1,0]
+   ];
+
+   neighbors.forEach(([dx,dy],i)=>{
+    if(data[(y+dy)*width+(x+dx)]>=center){
+     code|=(1<<i);
     }
+   });
 
-    return Math.max(0, 1 - total / (size * size));
+   let cx=Math.min(3,Math.floor(x*4/width));
+   let cy=Math.min(3,Math.floor(y*4/height));
+
+   let cell=cy*4+cx;
+   let bin=uniformMap[code];
+
+   result[cell*59+bin]++;
+  }
+ }
+
+ for(let cell=0;cell<16;cell++){
+
+  let sum=0;
+
+  for(let j=0;j<59;j++){
+   sum+=result[cell*59+j];
+  }
+
+  if(sum>0){
+   for(let j=0;j<59;j++){
+    result[cell*59+j]/=sum;
+   }
+  }
+ }
+
+ return result;
 }
 
-// JALANKAN VERIFIKASI
+// =================================
+// 9. GEOMETRI KONTUR
+// =================================
 
-function verifikasi() {
+function hitungGeometri(gray){
 
-    if (!gambarA || !gambarB) {
+ let binary=new cv.Mat();
 
-        alert("Silakan upload gambar A dan gambar B terlebih dahulu!");
-        return;
-    }
+ cv.threshold(
+  gray,binary,0,255,
+  cv.THRESH_BINARY+cv.THRESH_OTSU
+ );
 
-    const skor = similarity(gambarA, gambarB);
+ let contours=new cv.MatVector();
+ let hierarchy=new cv.Mat();
 
-    const ambang = Number(
-        document.getElementById("threshold").value
-    );
+ cv.findContours(
+  binary,contours,hierarchy,
+  cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE
+ );
 
-    const cocok = skor >= ambang;
+ let maxArea=0;
+ let area=0;
+ let perimeter=0;
+ let ratio=0;
 
-    document.getElementById("result").style.display = "block";
+ for(let i=0;i<contours.size();i++){
 
-    document.getElementById("score").innerText =
-    skor.toFixed(4);
+  let c=contours.get(i);
+  let a=cv.contourArea(c);
 
-    document.getElementById("usedThreshold").innerText =
-    ambang.toFixed(2);
+  if(a>maxArea){
 
-    document.getElementById("decision").innerText =
-    cocok ? "COCOK" : "TIDAK COCOK";
+   maxArea=a;
+   area=a;
+   perimeter=cv.arcLength(c,true);
 
-    document.getElementById("decision").style.color =
-    cocok ? "green" : "red";
+   let rect=cv.boundingRect(c);
+   ratio=rect.height>0
+    ?rect.width/rect.height:0;
+  }
+ }
 
-    document.getElementById("histScore").innerText =
-    skor.toFixed(4);
+ binary.delete();
+ contours.delete();
+ hierarchy.delete();
 
-    document.getElementById("huScore").innerText =
-    "Belum dihitung";
+ return {area,perimeter,ratio};
+}
 
-    document.getElementById("lbpScore").innerText =
-    document.getElementById("lbp").checked
-    ? "Belum dihitung" : "Tidak digunakan";
+// =================================
+// 10. EKSTRAKSI FITUR
+// =================================
 
-    document.getElementById("roiA").innerText =
-    document.getElementById("roi").value;
+function ekstraksi(canvas){
 
-    document.getElementById("roiB").innerText =
-    document.getElementById("roi").value;
+ let src=cv.imread(canvas);
 
+ let roi=ambilROI(src);
+
+ let gray=new cv.Mat();
+ cv.cvtColor(roi.mat,gray,cv.COLOR_RGBA2GRAY);
+
+ let roiCanvas=document.createElement("canvas");
+ cv.imshow(roiCanvas,roi.mat);
+
+ let ctx=roiCanvas.getContext("2d");
+ let pixels=ctx.getImageData(
+  0,0,roiCanvas.width,roiCanvas.height
+ );
+
+ let hist=histogramRGB(pixels);
+ let hu=hitungHu(gray);
+ let lbp=hitungLBP(gray);
+ let geo=hitungGeometri(gray);
+
+ const result={
+  hist,
+  hu,
+  lbp,
+  geo,
+  roi:roi.info
+ };
+
+ src.delete();
+ roi.mat.delete();
+ gray.delete();
+
+ return result;
+}
+
+// =================================
+// 11. SKOR KORELASI NCC
+// =================================
+
+function ncc(a,b){
+
+ if(a.length!==b.length || a.length===0) return 0;
+
+ let meanA=a.reduce((s,v)=>s+v,0)/a.length;
+ let meanB=b.reduce((s,v)=>s+v,0)/b.length;
+
+ let numerator=0;
+ let sumA=0;
+ let sumB=0;
+
+ for(let i=0;i<a.length;i++){
+
+  let da=a[i]-meanA;
+  let db=b[i]-meanB;
+
+  numerator+=da*db;
+  sumA+=da*da;
+  sumB+=db*db;
+ }
+
+ if(sumA===0 || sumB===0){
+  return a.every((v,i)=>v===b[i])?1:0;
+ }
+
+ let corr=numerator/Math.sqrt(sumA*sumB);
+
+ return Math.max(0,Math.min(1,(corr+1)/2));
+}
+
+// =================================
+// 12. SKOR MOMEN HU
+// =================================
+
+function skorHu(a,b){
+
+ let diff=0;
+
+ for(let i=0;i<7;i++){
+  diff+=Math.abs(a[i]-b[i]);
+ }
+
+ return 1/(1+diff/7);
+}
+
+// =================================
+// 13. VERIFIKASI
+// =================================
+
+function verifikasi(){
+
+ if(!window.cvReady){
+  alert("OpenCV.js belum siap.");
+  return;
+ }
+
+ if(!gambarA || !gambarB){
+  alert("Upload gambar A dan B terlebih dahulu.");
+  return;
+ }
+
+ try{
+
+  const A=ekstraksi(buatCanvas(gambarA));
+  const B=ekstraksi(buatCanvas(gambarB,true));
+
+  const sWarna=ncc(A.hist,B.hist);
+  const sHu=skorHu(A.hu,B.hu);
+  const sLbp=ncc(A.lbp,B.lbp);
+
+  const wWarna=Number(document.getElementById("warna").value);
+  const wHu=Number(document.getElementById("hu").value);
+  const wLbp=Number(document.getElementById("bobotLbp").value);
+
+  const useLbp=document.getElementById("lbpEnabled").checked;
+
+  const totalWeight=wWarna+wHu+(useLbp?wLbp:0);
+
+  if(totalWeight===0){
+   alert("Atur minimal satu bobot fitur lebih dari nol.");
+   return;
+  }
+
+  const score=(
+   sWarna*wWarna+
+   sHu*wHu+
+   (useLbp?sLbp*wLbp:0)
+  )/totalWeight;
+
+  const threshold=Number(
+   document.getElementById("threshold").value
+  );
+
+  const cocok=score>=threshold;
+
+  document.getElementById("result").style.display="block";
+
+  document.getElementById("score").textContent=score.toFixed(4);
+  document.getElementById("usedThreshold").textContent=threshold.toFixed(2);
+
+  document.getElementById("decision").textContent=
+   cocok?"COCOK":"TIDAK COCOK";
+
+  document.getElementById("decision").style.color=
+   cocok?"green":"red";
+
+  document.getElementById("histScore").textContent=
+   sWarna.toFixed(4);
+
+  document.getElementById("huScore").textContent=
+   sHu.toFixed(4);
+
+  document.getElementById("lbpScore").textContent=
+   useLbp?sLbp.toFixed(4):"Tidak digunakan";
+
+  document.getElementById("huA").textContent=
+   "7 nilai fitur";
+
+  document.getElementById("huB").textContent=
+   "7 nilai fitur";
+
+  document.getElementById("lbpA").textContent=
+   useLbp?"Vektor 944 fitur":"Tidak digunakan";
+
+  document.getElementById("lbpB").textContent=
+   useLbp?"Vektor 944 fitur":"Tidak digunakan";
+
+  document.getElementById("geoA").textContent=
+   `Luas: ${A.geo.area.toFixed(0)}, Keliling: ${A.geo.perimeter.toFixed(0)}, Rasio: ${A.geo.ratio.toFixed(2)}`;
+
+  document.getElementById("geoB").textContent=
+   `Luas: ${B.geo.area.toFixed(0)}, Keliling: ${B.geo.perimeter.toFixed(0)}, Rasio: ${B.geo.ratio.toFixed(2)}`;
+
+  document.getElementById("roiA").textContent=A.roi;
+  document.getElementById("roiB").textContent=B.roi;
+
+ }catch(error){
+
+  console.error(error);
+  alert("Terjadi kesalahan saat memproses gambar: "+error.message);
+
+ }
 }
 
 </script>
-
 </body>
 </html>
