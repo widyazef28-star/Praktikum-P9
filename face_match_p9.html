@@ -350,10 +350,40 @@ function hitungHu(m) {
     ];
 }
 
+    // MEMBUAT ROI WAJAH
+function buatROI(canvasId) {
+    const canvasAsli = document.getElementById(canvasId);
+    const roiCanvas = document.createElement("canvas");
+    roiCanvas.width = 200;
+    roiCanvas.height = 200;
+
+    const ctxROI = roiCanvas.getContext("2d");
+
+    const x = 40;
+    const y = 20;
+    const width = 120;
+    const height = 160;
+
+    ctxROI.drawImage(
+        canvasAsli,
+        x, y, width, height,
+        0, 0, 200, 200
+    );
+
+    return {
+        canvas: roiCanvas,
+        info: { x, y, width, height }
+    };
+}
+
+// FUNGSI EKSTRAKSI FITUR GAMBAR
+function ekstrakFiturObjek(canvasId) {
 // EKSTRAKSI FITUR GAMBAR
 function ekstrakFiturObjek(canvasId) {
 
-    let src = cv.imread(canvasId);
+    const hasilROI = buatROI(canvasId);
+    const canvasROI = hasilROI.canvas;
+    let src = cv.imread(canvasROI);
     let gray = new cv.Mat();
     let binary = new cv.Mat();
 
@@ -372,7 +402,7 @@ function ekstrakFiturObjek(canvasId) {
         );
 
         // 1. HISTOGRAM RGB
-        const canvas = document.getElementById(canvasId);
+        const canvas = canvasROI;
         const ctx = canvas.getContext("2d");
 
         const pixels = ctx.getImageData(
@@ -531,12 +561,11 @@ function ekstrakFiturObjek(canvasId) {
 
         };
 
-        return {
-
+               return {
             histVec,
             huVec,
-            bentukInfo
-
+            bentukInfo,
+            roiInfo: hasilROI.info
         };
 
     } finally {
