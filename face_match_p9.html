@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -246,8 +247,15 @@ function onOpenCvReady() {
         document.getElementById("inputB").disabled = false;
 
         cekTombol();
-
     };
+}
+
+// CEK KESIAPAN TOMBOL
+function cekTombol() {
+
+    document.getElementById("btnVerify").disabled =
+        !(imgLoadedA && imgLoadedB && cvReady);
+
 }
 
 // MENGATUR THRESHOLD
@@ -258,14 +266,6 @@ document.getElementById("threshold")
         Number(e.target.value).toFixed(2);
 
 });
-
-// CEK TOMBOL VERIFIKASI
-function cekTombol() {
-
-    document.getElementById("btnVerify").disabled =
-        !(imgLoadedA && imgLoadedB && cvReady);
-
-}
 
 // MEMUAT GAMBAR
 function loadImage(inputId, canvasId, flag) {
@@ -300,9 +300,7 @@ function loadImage(inputId, canvasId, flag) {
         };
 
         img.onerror = function() {
-
             alert("Gambar tidak dapat dibaca.");
-
         };
 
         img.src = URL.createObjectURL(file);
@@ -351,7 +349,6 @@ function hitungHu(m) {
         a * d * (3*c*c - d*d)
 
     ];
-
 }
 
 // EKSTRAKSI FITUR GAMBAR
@@ -359,10 +356,7 @@ function ekstrakFiturObjek(canvasId) {
 
     let src = cv.imread(canvasId);
     let gray = new cv.Mat();
-
-    let binary = null;
-    let contours = null;
-    let hierarchy = null;
+    let binary = new cv.Mat();
 
     let histVec = [];
 
@@ -379,8 +373,6 @@ function ekstrakFiturObjek(canvasId) {
         );
 
         // 1. HISTOGRAM RGB
-        // Menghitung histogram langsung dari piksel gambar
-
         const canvas = document.getElementById(canvasId);
         const ctx = canvas.getContext("2d");
 
@@ -431,11 +423,7 @@ function ekstrakFiturObjek(canvasId) {
 
         }
 
-        // 2. MOMEN HU DAN KONTUR
-
-        binary = new cv.Mat();
-        contours = new cv.MatVector();
-        hierarchy = new cv.Mat();
+        // 2. MOMEN HU DAN GEOMETRI
 
         cv.threshold(
             gray,
@@ -445,91 +433,104 @@ function ekstrakFiturObjek(canvasId) {
             cv.THRESH_BINARY + cv.THRESH_OTSU
         );
 
-        console.log("CEK binary:", binary instanceof cv.Mat);
-        console.log("CEK contours:", contours instanceof cv.MatVector);
-        console.log("CEK hierarchy:", hierarchy instanceof cv.Mat);
-        console.log("CEK findContours:", typeof cv.findContours);
+        // Memastikan area objek adalah area putih yang lebih kecil
+        let whiteCount = 0;
 
-        cv.findContours(
-            binary,
-            contours,
-            hierarchy,
-            cv.RETR_EXTERNAL,
-            cv.CHAIN_APPROX_SIMPLE
-        );
+        for (let i = 0; i < binary.data.length; i++) {
+            if (binary.data[i] > 0) {
+                whiteCount++;
+            }
+        }
 
-        let maxArea = 0;
-        let maxIdx = -1;
+        if (whiteCount > binary.rows * binary.cols / 2) {
+            cv.bitwise_not(binary, binary);
+        }
 
-        for (let i = 0; i < contours.size(); i++) {
+        // Menghitung momen dari citra biner
+        const momen = cv.moments(binary, true);
+        const hu = hitungHu(momen);
 
-            let contour = contours.get(i);
-            let area = cv.contourArea(contour);
+        let huVec = hu.map(function(val) {
 
-            if (area > maxArea) {
+            return val !== 0 && Number.isFinite(val)
+                ? -Math.sign(val) * Math.log10(Math.abs(val))
+                : 0;
 
-                maxArea = area;
-                maxIdx = i;
+        });
+
+        // Menghitung geometri berdasarkan piksel objek
+        let minX = binary.cols;
+        let minY = binary.rows;
+        let maxX = -1;
+        let maxY = -1;
+
+        let luas = 0;
+        let keliling = 0;
+
+        const data = binary.data;
+        const rows = binary.rows;
+        const cols = binary.cols;
+
+        for (let y = 0; y < rows; y++) {
+
+            for (let x = 0; x < cols; x++) {
+
+                const index = y * cols + x;
+
+                if (data[index] > 0) {
+
+                    luas++;
+
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+
+                    // Menghitung sisi batas objek
+                    if (y === 0 || data[(y-1)*cols+x] === 0) {
+                        keliling++;
+                    }
+
+                    if (y === rows-1 || data[(y+1)*cols+x] === 0) {
+                        keliling++;
+                    }
+
+                    if (x === 0 || data[y*cols+x-1] === 0) {
+                        keliling++;
+                    }
+
+                    if (x === cols-1 || data[y*cols+x+1] === 0) {
+                        keliling++;
+                    }
+
+                }
 
             }
 
-            contour.delete();
+        }
+
+        let rasioAspek = 0;
+
+        if (maxX >= minX && maxY >= minY) {
+
+            const width = maxX - minX + 1;
+            const height = maxY - minY + 1;
+
+            rasioAspek = height > 0
+                ? width / height
+                : 0;
 
         }
 
-        let huVec = new Array(7).fill(0);
+        const bentukInfo = {
 
-        let bentukInfo = {
-            luas: 0,
-            keliling: 0,
-            rasioAspek: 0
+            luas: luas,
+
+            keliling: keliling,
+
+            rasioAspek: rasioAspek.toFixed(2)
+
         };
-
-        if (maxIdx !== -1 && maxArea > 0) {
-
-            let konturUtama = contours.get(maxIdx);
-
-            let keliling = cv.arcLength(
-                konturUtama,
-                true
-            );
-
-            let rect = cv.boundingRect(konturUtama);
-
-            bentukInfo = {
-
-                luas: maxArea.toFixed(0),
-
-                keliling: keliling.toFixed(1),
-
-                rasioAspek:
-                    rect.height > 0
-                    ? (rect.width / rect.height).toFixed(2)
-                    : 0
-
-            };
-
-            const momen = cv.moments(
-                konturUtama,
-                false
-            );
-
-            const hu = hitungHu(momen);
-
-            for (let i = 0; i < 7; i++) {
-
-                const val = hu[i];
-
-                huVec[i] =
-                    val !== 0 && Number.isFinite(val)
-                    ? -Math.sign(val) * Math.log10(Math.abs(val))
-                    : 0;
-
-            }
-
-            konturUtama.delete();
-
-        }
 
         return {
 
@@ -543,10 +544,7 @@ function ekstrakFiturObjek(canvasId) {
 
         src.delete();
         gray.delete();
-
-        if (binary) binary.delete();
-        if (contours) contours.delete();
-        if (hierarchy) hierarchy.delete();
+        binary.delete();
 
     }
 
@@ -559,9 +557,7 @@ function ncc(vecA, vecB) {
         vecA.length !== vecB.length ||
         vecA.length === 0
     ) {
-
         return 0;
-
     }
 
     let dot = 0;
@@ -627,11 +623,7 @@ document.getElementById("btnVerify")
     try {
 
         if (!cvReady || !imgLoadedA || !imgLoadedB) {
-
-            throw new Error(
-                "OpenCV atau gambar belum siap."
-            );
-
+            throw new Error("OpenCV atau gambar belum siap.");
         }
 
         statusBox.textContent =
@@ -643,12 +635,11 @@ document.getElementById("btnVerify")
             document.getElementById("threshold").value
         );
 
-        // EKSTRAKSI FITUR OBJEK A DAN B
+        // EKSTRAKSI FITUR
         const fiturA = ekstrakFiturObjek("canvasA");
-
         const fiturB = ekstrakFiturObjek("canvasB");
 
-        // MENGHITUNG HASIL VERIFIKASI
+        // VERIFIKASI
         const hasil = verifikasiWajah(
             fiturA,
             fiturB,
@@ -672,7 +663,6 @@ document.getElementById("btnVerify")
             " | Threshold: " +
             ambang.toFixed(2);
 
-        // MENAMPILKAN HASIL METRIK
         document.getElementById("metricsBody").innerHTML = `
 
             <tr>
@@ -718,9 +708,7 @@ document.getElementById("btnVerify")
 
         `;
 
-        statusBox.textContent =
-            "Pengujian selesai.";
-
+        statusBox.textContent = "Pengujian selesai.";
         statusBox.className = "ready";
 
     } catch (error) {
